@@ -94,18 +94,18 @@ body {
 /* ─── Header ─────────────────────────────────────────────── */
 header {
   text-align: center;
-  margin-bottom: 3.5rem;
+  margin-bottom: 2rem;
   width: 100%;
   max-width: 560px;
 }
 
 .logo {
-  font-size: clamp(2.8rem, 7vw, 4rem);
+  font-size: clamp(1.75rem, 5vw, 2.5rem);
   font-weight: 700;
   letter-spacing: -0.04em;
   color: var(--text);
   line-height: 1.05;
-  margin-bottom: 0.6rem;
+  margin-bottom: 0.3rem;
 }
 
 .logo span {
@@ -114,10 +114,10 @@ header {
 }
 
 .tagline {
-  font-size: 1.0625rem;
+  font-size: 0.9375rem;
   font-weight: 400;
   color: var(--text-3);
-  letter-spacing: -0.015em;
+  letter-spacing: -0.01em;
 }
 
 /* ─── Card ───────────────────────────────────────────────── */
@@ -379,8 +379,19 @@ header {
   height: 100%;
   background: var(--accent);
   border-radius: 100px;
-  transition: width 0.25s cubic-bezier(0.4,0,0.2,1);
+  transition: width 0.2s cubic-bezier(0.4,0,0.2,1);
   width: 0%;
+}
+
+.progress-label {
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: var(--text-3);
+  margin-top: 0.5rem;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.01em;
+  min-height: 1.2em;
 }
 
 /* ─── Files List ─────────────────────────────────────────── */
@@ -523,6 +534,13 @@ footer {
   font-weight: 700;
   color: var(--accent);
   letter-spacing: 0.06em;
+}
+
+.members-count {
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: var(--text-3);
+  letter-spacing: -0.01em;
 }
 
 .badge-actions {
@@ -696,6 +714,9 @@ footer {
   transition: background 0.18s, transform 0.15s, opacity 0.3s;
   opacity: 0;
   transform: translateY(6px);
+  position: relative;
+  overflow: hidden;
+  flex-wrap: wrap;
 }
 
 .drop-item.drop-visible {
@@ -794,6 +815,13 @@ footer {
 #qr-canvas {
   border-radius: 12px;
   overflow: hidden;
+  line-height: 0;
+}
+
+#qr-canvas img,
+#qr-canvas canvas {
+  border-radius: 12px;
+  display: block;
 }
 
 .modal-code {
@@ -847,4 +875,88 @@ footer {
   .text-actions .btn-primary { width: 100%; justify-content: center; }
   .room-badge { flex-direction: column; align-items: flex-start; }
   .drop-item { flex-wrap: wrap; }
+}
+
+/* ─── Timer colors ───────────────────────────────────────── */
+.ftimer { color: var(--warning); }
+.ftimer.timer-ok     { color: var(--success); }
+.ftimer.timer-warn   { color: var(--warning); }
+.ftimer.timer-danger { color: var(--error); animation: pulse-danger 1s ease infinite; }
+
+@keyframes pulse-danger {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.5; }
+}
+
+/* ─── TTL bar ────────────────────────────────────────────── */
+.ttl-bar-wrap {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: var(--border);
+  border-radius: 0 0 var(--radius-sm) var(--radius-sm);
+  overflow: hidden;
+}
+.ttl-bar {
+  height: 100%;
+  background: var(--accent);
+  transition: width 1s linear, background 0.5s;
+  width: 100%;
+}
+.drop-item:has(.timer-warn) .ttl-bar  { background: var(--warning); }
+.drop-item:has(.timer-danger) .ttl-bar { background: var(--error); }
+
+/* ─── Compact mode ───────────────────────────────────────── */
+#files-list.compact .drop-item {
+  padding: 0.5rem 0.875rem;
+}
+#files-list.compact .thumb-wrap { display: none; }
+#files-list.compact .drop-text-content { -webkit-line-clamp: 1; }
+#files-list.compact .fsize { display: none; }
+
+/* ─── Modal imagen ───────────────────────────────────────── */
+.img-modal-inner {
+  background: var(--surface-solid);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  max-width: 90vw;
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+  box-shadow: var(--shadow-lg);
+}
+.img-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1rem 1.25rem;
+  border-bottom: 1px solid var(--border);
+}
+.img-modal-title {
+  font-size: 0.9375rem;
+  font-weight: 500;
+  color: var(--text);
+  letter-spacing: -0.01em;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 200px;
+}
+.img-modal-img {
+  max-width: 100%;
+  max-height: calc(90vh - 60px);
+  object-fit: contain;
+  display: block;
+}
+
+/* ─── Logo animation ─────────────────────────────────────── */
+@keyframes ghost-appear {
+  0%   { opacity: 0; transform: translateY(-8px) scale(0.95); filter: blur(4px); }
+  60%  { opacity: 1; transform: translateY(2px) scale(1.02); filter: blur(0); }
+  100% { transform: translateY(0) scale(1); }
+}
+.logo-animate {
+  animation: ghost-appear 0.7s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
 }

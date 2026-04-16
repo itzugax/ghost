@@ -98,10 +98,10 @@ async function resolveRoomId() {
   return "000000ff";
 }
 
-// ─── Supabase: sala y archivos ─────────────────────────────
+// ─── db: sala y archivos ─────────────────────────────
 
 async function ensureRoom(id) {
-  const { error } = await supabase
+  const { error } = await db
     .from("rooms")
     .upsert({ id, last_seen: new Date().toISOString() }, { onConflict: "id" });
 
@@ -109,7 +109,7 @@ async function ensureRoom(id) {
 }
 
 async function loadFiles() {
-  const { data, error } = await supabase
+  const { data, error } = await db
     .from("drops")
     .select("*")
     .eq("room_id", roomId)
@@ -206,7 +206,7 @@ async function uploadFile(file) {
   const path      = `${roomId}/${safeName}`;
   const expiresAt = new Date(Date.now() + TTL_SECONDS * 1000).toISOString();
 
-  // Supabase JS v2 no tiene onUploadProgress nativo en storage,
+  // db JS v2 no tiene onUploadProgress nativo en storage,
   // simulamos la barra con un intervalo visual
   let fakeProgress = 0;
   const fakeTimer = setInterval(() => {
@@ -214,7 +214,7 @@ async function uploadFile(file) {
     progressBar.style.width = fakeProgress + "%";
   }, 150);
 
-  const { error: upErr } = await supabase.storage
+  const { error: upErr } = await db.storage
     .from("ghost-drop")
     .upload(path, file, { cacheControl: "0", upsert: false });
 
@@ -229,7 +229,7 @@ async function uploadFile(file) {
   progressBar.style.width = "95%";
 
   // Insertar registro en DB
-  const { error: dbErr } = await supabase.from("drops").insert({
+  const { error: dbErr } = await db.from("drops").insert({
     room_id:      roomId,
     file_name:    file.name,
     file_size:    file.size,
@@ -239,7 +239,7 @@ async function uploadFile(file) {
 
   if (dbErr) {
     // Si falla la DB, limpiamos el archivo ya subido al storage
-    await supabase.storage.from("ghost-drop").remove([path]);
+    await db.storage.from("ghost-drop").remove([path]);
     progressWrap.style.display = "none";
     setStatus("Error al registrar el archivo: " + dbErr.message, "error");
     return;
@@ -255,7 +255,7 @@ async function uploadFile(file) {
 async function downloadAndDestroy(storagePath, dropId, fileName) {
   setStatus("Descargando…", "info");
 
-  const { data, error } = await supabase.storage
+  const { data, error } = await db.storage
     .from("ghost-drop")
     .download(storagePath);
 
@@ -273,8 +273,8 @@ async function downloadAndDestroy(storagePath, dropId, fileName) {
   URL.revokeObjectURL(url);
 
   // 💀 Auto-destrucción
-  await supabase.from("drops").delete().eq("id", dropId);
-  await supabase.storage.from("ghost-drop").remove([storagePath]);
+  await db.from("drops").delete().eq("id", dropId);
+  await db.storage.from("ghost-drop").remove([storagePath]);
 
   setStatus("Archivo descargado y eliminado.", "warn");
 
@@ -289,9 +289,9 @@ async function downloadAndDestroy(storagePath, dropId, fileName) {
 // ─── Realtime: escuchar cambios en la sala ─────────────────
 
 function subscribeToRoom() {
-  if (realtimeChannel) supabase.removeChannel(realtimeChannel);
+  if (realtimeChannel) db.removeChannel(realtimeChannel);
 
-  realtimeChannel = supabase
+  realtimeChannel = db
     .channel(`room-${roomId}`)
     .on(
       "postgres_changes",
@@ -302,11 +302,11 @@ function subscribeToRoom() {
 }
 
 // ─── Limpieza de archivos expirados (cliente) ──────────────
-// El lado servidor lo debe manejar un cron de Supabase Edge Function,
+// El lado servidor lo debe manejar un cron de db Edge Function,
 // pero por si acaso también lo disparamos desde el cliente ocasionalmente.
 
 async function cleanExpired() {
-  const { data } = await supabase
+  const { data } = await db
     .from("drops")
     .select("id, storage_path")
     .eq("room_id", roomId)
@@ -317,8 +317,8 @@ async function cleanExpired() {
   const paths = data.map((d) => d.storage_path);
   const ids   = data.map((d) => d.id);
 
-  await supabase.storage.from("ghost-drop").remove(paths);
-  await supabase.from("drops").delete().in("id", ids);
+  await db.storage.from("ghost-drop").remove(paths);
+  await db.from("drops").delete().in("id", ids);
 }
 
 // ─── Drag & Drop ──────────────────────────────────────────

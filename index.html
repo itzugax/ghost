@@ -3,8 +3,10 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>GHOST-DROP — Protocolo Fantasma</title>
-  <meta name="description" content="Intercambio de archivos volátil. Si no estás aquí, no existe." />
+  <title>Ghost Drop</title>
+  <meta name="description" content="Intercambio de archivos efímero. Si no estás aquí, no existe." />
+  <meta name="theme-color" content="#f5f5f7" media="(prefers-color-scheme: light)" />
+  <meta name="theme-color" content="#000000" media="(prefers-color-scheme: dark)" />
 
   <!-- Supabase JS v2 CDN -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -15,24 +17,24 @@
 <body>
 
   <header>
-    <div class="logo">👻 GHOST<span>-</span>DROP</div>
-    <div class="tagline">Si no estás aquí, no existe</div>
+    <div class="logo">👻 Ghost<span>Drop</span></div>
+    <div class="tagline">Comparte archivos. Sin rastro.</div>
   </header>
 
   <!-- Estado de conexión / zona -->
   <div class="card">
-    <div class="card-title">// Estado del Protocolo</div>
-    <div id="status" class="status info">Iniciando...</div>
-    <div id="room-id">Zona: detectando...</div>
+    <div class="card-title">Estado</div>
+    <div id="status" class="status info">Iniciando…</div>
+    <div id="room-id">Zona: detectando…</div>
   </div>
 
   <!-- Zona de subida -->
   <div class="card">
-    <div class="card-title">// Dejar un Drop</div>
+    <div class="card-title">Compartir archivo</div>
     <div id="dropzone">
       <span class="drop-icon">📂</span>
       <div class="drop-label">Arrastra un archivo aquí</div>
-      <div class="drop-sub">o haz clic para seleccionar · máx. 50 MB · TTL 5 min</div>
+      <div class="drop-sub">o toca para seleccionar · máx. 50 MB · se destruye en 5 min</div>
     </div>
     <input type="file" id="file-input" />
     <div id="progress-wrap">
@@ -42,14 +44,14 @@
 
   <!-- Archivos disponibles en la zona -->
   <div class="card">
-    <div class="card-title">// Drops en tu Zona</div>
+    <div class="card-title">Disponibles en tu zona</div>
     <ul id="files-list">
-      <li class="empty">Buscando drops en tu zona...</li>
+      <li class="empty">Buscando archivos en tu zona…</li>
     </ul>
   </div>
 
   <footer>
-    GHOST-DROP · Protocolo Fantasma · Rastro cero
+    Ghost Drop · Rastro cero · Efímero por diseño
   </footer>
 
   <script src="supabase-config.js"></script>

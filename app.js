@@ -24,8 +24,6 @@ function setStatus(msg, type = "info") {
   statusEl.textContent = msg;
   statusEl.className = `status ${type}`;
 }
-
-function hashString(str) {
   // FNV-1a 32-bit — rápido, suficiente para room IDs
   let hash = 0x811c9dc5;
   for (let i = 0; i < str.length; i++) {
@@ -77,24 +75,24 @@ function getGeoLocation() {
 }
 
 async function resolveRoomId() {
-  setStatus("👻 Detectando tu zona...", "info");
+  setStatus("Detectando tu zona…", "info");
 
   // Intentamos geo primero (más preciso para ~100m)
   const geo = await getGeoLocation();
   if (geo) {
-    setStatus("📡 Zona detectada por GPS", "success");
+    setStatus("Zona detectada por GPS", "success");
     return hashString(`geo:${geo}`);
   }
 
   // Fallback: IP pública (misma red/router)
   const ip = await getPublicIP();
   if (ip) {
-    setStatus("🌐 Zona detectada por red (IP compartida)", "success");
+    setStatus("Zona detectada por red compartida", "success");
     return hashString(`ip:${ip}`);
   }
 
   // Último recurso: sala pública de emergencia (no recomendado)
-  setStatus("⚠️ No se pudo detectar zona — sala de emergencia", "warn");
+  setStatus("No se pudo detectar zona — usando sala de emergencia", "warn");
   return "000000ff";
 }
 
@@ -166,7 +164,7 @@ function startFileTimer(fileId, secs) {
     const el = document.getElementById(`t-${fileId}`);
     if (!el) { clearInterval(fileTimers[fileId]); return; }
     if (remaining <= 0) {
-      el.textContent = "💀 Expirado";
+      el.textContent = "Expirado";
       clearInterval(fileTimers[fileId]);
       // Quitamos el item visualmente
       document.querySelector(`li[data-id="${fileId}"]`)?.remove();
@@ -178,13 +176,26 @@ function startFileTimer(fileId, secs) {
 
 // ─── Upload ───────────────────────────────────────────────
 
+const ALLOWED_TYPES = null; // null = todos los tipos permitidos
+// Para restringir tipos, usa algo como: ["image/", "application/pdf", "text/"]
+
 async function uploadFile(file) {
   if (file.size > 50 * 1024 * 1024) {
-    setStatus("❌ Máximo 50 MB por archivo", "error");
+    setStatus("El archivo supera el límite de 50 MB", "error");
     return;
   }
 
-  setStatus("⬆️ Subiendo...", "info");
+  if (file.size === 0) {
+    setStatus("El archivo está vacío", "error");
+    return;
+  }
+
+  if (!roomId) {
+    setStatus("Zona no detectada. Recarga la página.", "error");
+    return;
+  }
+
+  setStatus("Subiendo archivo…", "info");
   progressWrap.style.display = "block";
   progressBar.style.width = "0%";
 
@@ -209,7 +220,7 @@ async function uploadFile(file) {
 
   if (upErr) {
     progressWrap.style.display = "none";
-    setStatus("❌ Error al subir: " + upErr.message, "error");
+    setStatus("Error al subir: " + upErr.message, "error");
     return;
   }
 
@@ -225,27 +236,29 @@ async function uploadFile(file) {
   });
 
   if (dbErr) {
+    // Si falla la DB, limpiamos el archivo ya subido al storage
+    await supabase.storage.from("ghost-drop").remove([path]);
     progressWrap.style.display = "none";
-    setStatus("❌ Error en base de datos: " + dbErr.message, "error");
+    setStatus("Error al registrar el archivo: " + dbErr.message, "error");
     return;
   }
 
   progressBar.style.width = "100%";
   setTimeout(() => { progressWrap.style.display = "none"; }, 800);
-  setStatus("✅ Archivo disponible por 5 minutos", "success");
+  setStatus("Archivo disponible por 5 minutos", "success");
 }
 
 // ─── Download & Self-Destruct ──────────────────────────────
 
 async function downloadAndDestroy(storagePath, dropId, fileName) {
-  setStatus("⬇️ Descargando...", "info");
+  setStatus("Descargando…", "info");
 
   const { data, error } = await supabase.storage
     .from("ghost-drop")
     .download(storagePath);
 
   if (error) {
-    setStatus("❌ Error al descargar: " + error.message, "error");
+    setStatus("Error al descargar: " + error.message, "error");
     return;
   }
 
@@ -261,7 +274,7 @@ async function downloadAndDestroy(storagePath, dropId, fileName) {
   await supabase.from("drops").delete().eq("id", dropId);
   await supabase.storage.from("ghost-drop").remove([storagePath]);
 
-  setStatus("💀 Archivo destruido. Rastro cero.", "warn");
+  setStatus("Archivo descargado y eliminado.", "warn");
 
   // Limpiamos el elemento de la lista
   clearInterval(fileTimers[dropId]);
@@ -328,18 +341,23 @@ fileInput.addEventListener("change", () => {
 // ─── Init ─────────────────────────────────────────────────
 
 async function init() {
-  setStatus("👻 Iniciando Protocolo Fantasma...", "info");
+  setStatus("Detectando tu zona…", "info");
 
-  roomId = await resolveRoomId();
-  roomEl.textContent = `Zona: #${roomId}`;
+  try {
+    roomId = await resolveRoomId();
+    roomEl.textContent = `Zona: #${roomId}`;
 
-  await ensureRoom(roomId);
-  await cleanExpired();
-  await loadFiles();
-  subscribeToRoom();
+    await ensureRoom(roomId);
+    await cleanExpired();
+    await loadFiles();
+    subscribeToRoom();
 
-  // Limpieza periódica cada 60 s
-  setInterval(cleanExpired, 60_000);
+    // Limpieza periódica cada 60 s
+    setInterval(cleanExpired, 60_000);
+  } catch (err) {
+    setStatus("Error al iniciar: " + err.message, "error");
+    console.error("init error:", err);
+  }
 }
 
 init();

@@ -4,13 +4,11 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Ghost Drop</title>
-  <meta name="description" content="Intercambio de archivos efímero. Si no estás aquí, no existe." />
+  <meta name="description" content="Intercambio de archivos efímero. Sin rastro." />
   <meta name="theme-color" content="#f5f5f7" media="(prefers-color-scheme: light)" />
   <meta name="theme-color" content="#000000" media="(prefers-color-scheme: dark)" />
 
-  <!-- Supabase JS v2 (local) -->
   <script src="supabase.min.js"></script>
-
   <link rel="stylesheet" href="style.css" />
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>👻</text></svg>" />
 </head>
@@ -21,16 +19,33 @@
     <div class="tagline">Comparte archivos. Sin rastro.</div>
   </header>
 
-  <!-- Estado de conexión / zona -->
+  <!-- Estado -->
   <div class="card">
     <div class="card-title">Estado</div>
-    <div id="status" class="status info">Iniciando…</div>
-    <div id="room-id">Zona: detectando…</div>
+    <div id="status" class="status info">Sin sala activa</div>
+    <div id="room-id" class="room-badge"></div>
   </div>
 
-  <!-- Zona de subida -->
-  <div class="card">
-    <div class="card-title">Compartir archivo</div>
+  <!-- Unirse o crear sala -->
+  <div class="card" id="room-section">
+    <div class="card-title">Sala</div>
+    <p class="room-desc">Crea una sala o únete con un código. Comparte el código con quien quieras.</p>
+    <div class="room-row">
+      <input id="room-input" type="text" placeholder="Código de sala…" maxlength="20" autocomplete="off" spellcheck="false" />
+      <button id="join-btn" class="btn-primary">Entrar</button>
+    </div>
+    <button id="new-room-btn" class="btn-secondary">Crear sala nueva</button>
+  </div>
+
+  <!-- Sala activa — info + salir -->
+  <div class="card" id="drop-section" style="display:none">
+    <div class="card-title">Sala activa</div>
+    <div class="room-actions">
+      <button id="copy-room-btn" class="btn-secondary" data-code="">Copiar código</button>
+      <button id="leave-btn" class="btn-ghost">Salir de sala</button>
+    </div>
+
+    <div class="card-title" style="margin-top:1.5rem">Compartir archivo</div>
     <div id="dropzone">
       <span class="drop-icon">📂</span>
       <div class="drop-label">Arrastra un archivo aquí</div>
@@ -42,11 +57,11 @@
     </div>
   </div>
 
-  <!-- Archivos disponibles en la zona -->
-  <div class="card">
-    <div class="card-title">Disponibles en tu zona</div>
+  <!-- Lista de archivos -->
+  <div class="card" id="list-section" style="display:none">
+    <div class="card-title">Archivos en la sala</div>
     <ul id="files-list">
-      <li class="empty">Buscando archivos en tu zona…</li>
+      <li class="empty">Únete a una sala para ver archivos.</li>
     </ul>
   </div>
 

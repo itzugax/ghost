@@ -24,6 +24,8 @@ function setStatus(msg, type = "info") {
   statusEl.textContent = msg;
   statusEl.className = `status ${type}`;
 }
+
+function hashString(str) {
   // FNV-1a 32-bit — rápido, suficiente para room IDs
   let hash = 0x811c9dc5;
   for (let i = 0; i < str.length; i++) {

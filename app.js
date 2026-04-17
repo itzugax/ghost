@@ -702,6 +702,37 @@ function updateDropCount(n) {
   }
 }
 
+// ─── Upload con progreso real via XHR ─────────────────────
+
+function uploadWithProgress(url, file, headers) {
+  return new Promise((resolve, reject) => {
+    const xhr = new XMLHttpRequest();
+    xhr.open("POST", url);
+    Object.entries(headers).forEach(([k, v]) => xhr.setRequestHeader(k, v));
+
+    xhr.upload.addEventListener("progress", (e) => {
+      if (!e.lengthComputable) return;
+      const pct = (e.loaded / e.total) * 100;
+      // Lerp suave — nunca superar 95% hasta confirmar
+      const display = Math.min(pct * 0.95, 95);
+      progressBar.style.width = display + "%";
+      setProgressLabel(e.loaded / e.total, file.size);
+    });
+
+    xhr.addEventListener("load", () => {
+      if (xhr.status >= 200 && xhr.status < 300) {
+        resolve(JSON.parse(xhr.responseText || "{}"));
+      } else {
+        reject(new Error(`HTTP ${xhr.status}: ${xhr.responseText}`));
+      }
+    });
+    xhr.addEventListener("error", () => reject(new Error("Network error")));
+    xhr.addEventListener("abort", () => reject(new Error("Upload aborted")));
+
+    xhr.send(file);
+  });
+}
+
 // ─── Upload ────────────────────────────────────────────────
 
 async function uploadFiles(files) {
@@ -712,15 +743,14 @@ async function uploadFiles(files) {
     if (file.size > 100 * 1024 * 1024) { showToast(`${file.name}: supera 100 MB`, "error"); continue; }
     if (file.size === 0) continue;
 
-    // Rate limit check
     const rl = checkRateLimit("file", file.size);
     if (!rl.ok) { showToast(rl.msg, "error"); break; }
     recordRateLimit("file", file.size);
 
-    // ── Mostrar progreso ──────────────────────────────────
+    // ── UI inicial ────────────────────────────────────────
     progressWrap.style.display = "block";
+    progressBar.classList.remove("progress-indeterminate", "progress-pulse");
     progressBar.style.width = "0%";
-    progressBar.classList.add("progress-indeterminate");
     setProgressLabel(0, file.size);
     showToast(`Subiendo ${file.name.slice(0, 20)}…`, "info");
     showUploadPreview(files);
@@ -729,46 +759,34 @@ async function uploadFiles(files) {
     const ext  = file.name.includes(".") ? file.name.split(".").pop() : "bin";
     const path = `${roomId}/${Date.now()}_${Math.random().toString(36).slice(2)}.${ext}`;
 
-    // Velocidad de simulación proporcional al tamaño:
-    // archivos pequeños (<1MB) van rápido, grandes van lento
-    const stepMs     = 150;
-    const totalSteps = Math.max(10, Math.min(60, Math.floor(file.size / (1024 * 100))));
-    const stepPct    = 82 / totalSteps;
-    let prog = 0;
-    const ticker = setInterval(() => {
-      prog = Math.min(prog + stepPct, 82);
-      progressBar.style.width = prog + "%";
-      setProgressLabel(prog / 100, file.size);
-    }, stepMs);
+    // ── Subida con XHR para progreso real ─────────────────
+    const uploadUrl = `${window.SUPABASE_URL}/storage/v1/object/ghost-drop/${path}`;
 
-    const { error: upErr } = await db.storage.from("ghost-drop")
-      .upload(path, file, { cacheControl: "0", upsert: false });
-
-    clearInterval(ticker);
+    let upErr = null;
+    try {
+      await uploadWithProgress(uploadUrl, file, {
+        "Authorization": `Bearer ${window.SUPABASE_ANON_KEY}`,
+        "x-upsert": "false",
+        "Content-Type": file.type || "application/octet-stream",
+        "Cache-Control": "0",
+      });
+    } catch (e) {
+      upErr = e;
+    }
 
     if (upErr) {
       progressWrap.style.display = "none";
-      progressBar.classList.remove("progress-pulse", "progress-indeterminate");
       setProgressLabel(0, 0);
       dropzone.classList.remove("uploading");
       showToast(`Error: ${upErr.message}`, "error");
       continue;
     }
 
-    // ── Subida terminada → creep lento hasta 98% con pulso ──
+    // ── Procesando en servidor ────────────────────────────
     progressBar.classList.add("progress-pulse");
-    prog = 85;
-    progressBar.style.width = prog + "%";
-    setProgressLabel(0.85, file.size);
-    document.getElementById("progress-label").textContent = "Finalizando… No cierres la pestaña";
-
-    // Creep artificial 85 → 98% mientras se hace el INSERT
-    const creep = setInterval(() => {
-      if (prog < 98) {
-        prog = Math.min(prog + 0.4, 98);
-        progressBar.style.width = prog + "%";
-      }
-    }, 200);
+    progressBar.style.width = "97%";
+    setProgressLabel(0.97, file.size);
+    document.getElementById("progress-label").textContent = "Procesando en servidor…";
 
     const expiresAt = new Date(serverNow() + TTL_SECONDS * 1000).toISOString();
     const { error: dbErr, data: insertData } = await db.from("drops").insert({
@@ -776,12 +794,10 @@ async function uploadFiles(files) {
       storage_path: path, expires_at: expiresAt, content_type: "file",
     }).select("id").single();
 
-    clearInterval(creep);
-
     if (dbErr) {
       await db.storage.from("ghost-drop").remove([path]);
       progressWrap.style.display = "none";
-      progressBar.classList.remove("progress-pulse", "progress-indeterminate");
+      progressBar.classList.remove("progress-pulse");
       dropzone.classList.remove("uploading");
       showToast(`Error BD: ${dbErr.message}`, "error");
       continue;
@@ -789,25 +805,20 @@ async function uploadFiles(files) {
 
     if (insertData?.id) {
       myRecentDrops.set(insertData.id, TTL_SECONDS);
-      // Añadir al DOM inmediatamente sin esperar Realtime
       prependDrop({
-        id: insertData.id,
-        room_id: roomId,
-        file_name: file.name,
-        file_size: file.size,
-        storage_path: path,
-        expires_at: expiresAt,
-        content_type: "file",
+        id: insertData.id, room_id: roomId,
+        file_name: file.name, file_size: file.size,
+        storage_path: path, expires_at: expiresAt, content_type: "file",
       });
     }
     incrementTotalUploads();
 
-    // ── 100% y cierre suave ──────────────────────────────
-    progressBar.classList.remove("progress-pulse", "progress-indeterminate");
+    // ── 100% y cierre ─────────────────────────────────────
+    progressBar.classList.remove("progress-pulse");
     progressBar.style.width = "100%";
     setProgressLabel(1, file.size);
     uploaded++;
-    await new Promise(r => setTimeout(r, 500));
+    await new Promise(r => setTimeout(r, 450));
     progressWrap.style.display = "none";
     setProgressLabel(0, 0);
     dropzone.classList.remove("uploading");

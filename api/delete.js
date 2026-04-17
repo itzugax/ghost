@@ -1,22 +1,16 @@
 // Vercel Serverless Function — elimina archivo de B2
 
-import { S3Client, DeleteObjectCommand } from "@aws-sdk/client-s3";
+async function getB2Auth() {
+  const keyId  = process.env.B2_KEY_ID;
+  const appKey = process.env.B2_APP_KEY;
+  const creds  = Buffer.from(`${keyId}:${appKey}`).toString("base64");
 
-const B2_BUCKET   = "ghost-drop";
-const B2_ENDPOINT = `https://${process.env.B2_ENDPOINT}`;
-const B2_KEY_ID   = process.env.B2_KEY_ID;
-const B2_APP_KEY  = process.env.B2_APP_KEY;
-const B2_REGION   = process.env.B2_ENDPOINT?.split(".")[1] || "us-east-005";
-
-const s3 = new S3Client({
-  endpoint:       B2_ENDPOINT,
-  region:         B2_REGION,
-  forcePathStyle: true,
-  credentials: {
-    accessKeyId:     B2_KEY_ID,
-    secretAccessKey: B2_APP_KEY,
-  },
-});
+  const res = await fetch("https://api.backblazeb2.com/b2api/v2/b2_authorize_account", {
+    headers: { Authorization: `Basic ${creds}` },
+  });
+  if (!res.ok) throw new Error("B2 auth failed");
+  return res.json();
+}
 
 export default async function handler(req, res) {
   res.setHeader("Access-Control-Allow-Origin", "*");
@@ -25,14 +19,27 @@ export default async function handler(req, res) {
   if (req.method === "OPTIONS") return res.status(200).end();
   if (req.method !== "DELETE")  return res.status(405).json({ error: "Method not allowed" });
 
-  const { key } = req.query;
+  const { key, fileId } = req.query;
   if (!key) return res.status(400).json({ error: "Missing key" });
 
   try {
-    await s3.send(new DeleteObjectCommand({ Bucket: B2_BUCKET, Key: key }));
+    const auth = await getB2Auth();
+
+    // Si tenemos fileId, borrar directamente
+    if (fileId) {
+      await fetch(`${auth.apiUrl}/b2api/v2/b2_delete_file_version`, {
+        method:  "POST",
+        headers: {
+          Authorization:  auth.authorizationToken,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ fileId, fileName: key }),
+      });
+    }
+
     return res.status(200).json({ ok: true });
   } catch (err) {
-    console.error("B2 delete error:", err);
+    console.error("B2 delete error:", err.message);
     return res.status(500).json({ error: err.message });
   }
 }

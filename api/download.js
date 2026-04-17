@@ -1,23 +1,16 @@
-// Vercel Serverless Function — genera URL firmada para descarga desde B2
+// Vercel Serverless Function — genera URL de descarga desde B2
 
-import { S3Client, GetObjectCommand } from "@aws-sdk/client-s3";
-import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
+async function getB2Auth() {
+  const keyId  = process.env.B2_KEY_ID;
+  const appKey = process.env.B2_APP_KEY;
+  const creds  = Buffer.from(`${keyId}:${appKey}`).toString("base64");
 
-const B2_BUCKET   = "ghost-drop";
-const B2_ENDPOINT = `https://${process.env.B2_ENDPOINT}`;
-const B2_KEY_ID   = process.env.B2_KEY_ID;
-const B2_APP_KEY  = process.env.B2_APP_KEY;
-const B2_REGION   = process.env.B2_ENDPOINT?.split(".")[1] || "us-east-005";
-
-const s3 = new S3Client({
-  endpoint:       B2_ENDPOINT,
-  region:         B2_REGION,
-  forcePathStyle: true,
-  credentials: {
-    accessKeyId:     B2_KEY_ID,
-    secretAccessKey: B2_APP_KEY,
-  },
-});
+  const res = await fetch("https://api.backblazeb2.com/b2api/v2/b2_authorize_account", {
+    headers: { Authorization: `Basic ${creds}` },
+  });
+  if (!res.ok) throw new Error("B2 auth failed");
+  return res.json();
+}
 
 export default async function handler(req, res) {
   res.setHeader("Access-Control-Allow-Origin", "*");
@@ -29,15 +22,30 @@ export default async function handler(req, res) {
   if (!key) return res.status(400).json({ error: "Missing key" });
 
   try {
-    const url = await getSignedUrl(s3, new GetObjectCommand({
-      Bucket:                     B2_BUCKET,
-      Key:                        key,
-      ResponseContentDisposition: `attachment; filename="${filename || key.split("/").pop()}"`,
-    }), { expiresIn: 60 }); // válida 60 segundos
+    const auth = await getB2Auth();
+    const { authorizationToken, downloadUrl } = auth;
 
+    // URL de descarga con token de autorización (válida 1 hora)
+    const dlRes = await fetch(`${auth.apiUrl}/b2api/v2/b2_get_download_authorization`, {
+      method:  "POST",
+      headers: {
+        Authorization:  authorizationToken,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        bucketId:               process.env.B2_BUCKET_ID,
+        fileNamePrefix:         key,
+        validDurationInSeconds: 3600,
+      }),
+    });
+
+    if (!dlRes.ok) throw new Error("Could not get download auth");
+    const { authorizationToken: dlToken } = await dlRes.json();
+
+    const url = `${downloadUrl}/file/ghost-drop/${key}?Authorization=${dlToken}`;
     return res.status(200).json({ url });
   } catch (err) {
-    console.error("B2 download error:", err);
+    console.error("B2 download error:", err.message);
     return res.status(500).json({ error: err.message });
   }
 }

@@ -1,4 +1,6 @@
 // Vercel Serverless Function — sube a Backblaze B2 via API nativa
+import crypto from "crypto";
+
 export const config = {
   api: {
     bodyParser: false,
@@ -36,9 +38,9 @@ export default async function handler(req, res) {
     const ext      = fileName.includes(".") ? fileName.split(".").pop() : "bin";
     const key      = `${roomId}/${Date.now()}_${Math.random().toString(36).slice(2)}.${ext}`;
 
-    // Leer body
+    // Leer body completo en un buffer
     const chunks = [];
-    for await (const chunk of req) chunks.push(chunk);
+    for await (const chunk of req) chunks.push(Buffer.from(chunk));
     const buffer = Buffer.concat(chunks);
 
     if (buffer.length === 0) return res.status(400).json({ error: "Empty file" });
@@ -65,25 +67,27 @@ export default async function handler(req, res) {
 
     const { uploadUrl, authorizationToken: uploadToken } = await urlRes.json();
 
-    // Subir archivo
-    const crypto = await import("crypto");
-    const sha1   = crypto.createHash("sha1").update(buffer).digest("hex");
+    // SHA1 del archivo
+    const sha1 = crypto.createHash("sha1").update(buffer).digest("hex");
+    const contentType = req.headers["content-type"] || "application/octet-stream";
 
+    // Subir a B2
     const uploadRes = await fetch(uploadUrl, {
-      method:  "POST",
+      method: "POST",
       headers: {
-        Authorization:     uploadToken,
-        "X-Bz-File-Name":  encodeURIComponent(key),
-        "Content-Type":    req.headers["content-type"] || "application/octet-stream",
-        "Content-Length":  buffer.length,
+        Authorization:       uploadToken,
+        "X-Bz-File-Name":    encodeURIComponent(key),
+        "Content-Type":      contentType,
+        "Content-Length":    String(buffer.length),
         "X-Bz-Content-Sha1": sha1,
       },
       body: buffer,
+      duplex: "half",
     });
 
     if (!uploadRes.ok) {
       const err = await uploadRes.text();
-      throw new Error(`Upload failed: ${err}`);
+      throw new Error(`B2 upload failed: ${err}`);
     }
 
     const fileData = await uploadRes.json();

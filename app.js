@@ -1002,7 +1002,7 @@ async function uploadFiles(files) {
   let uploaded = 0;
 
   for (const file of Array.from(files)) {
-    if (file.size > 100 * 1024 * 1024) { showToast(`${file.name}: supera 100 MB`, "error"); continue; }
+    if (file.size > 50 * 1024 * 1024) { showToast(`${file.name}: supera 50 MB`, "error"); continue; }
     if (file.size === 0) continue;
 
     const rl = checkRateLimit("file", file.size);

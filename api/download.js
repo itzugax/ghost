@@ -7,11 +7,12 @@ const B2_BUCKET   = "ghost-drop";
 const B2_ENDPOINT = `https://${process.env.B2_ENDPOINT}`;
 const B2_KEY_ID   = process.env.B2_KEY_ID;
 const B2_APP_KEY  = process.env.B2_APP_KEY;
-const B2_REGION   = "us-east-005";
+const B2_REGION   = process.env.B2_ENDPOINT?.split(".")[1] || "us-east-005";
 
 const s3 = new S3Client({
-  endpoint: B2_ENDPOINT,
-  region:   B2_REGION,
+  endpoint:       B2_ENDPOINT,
+  region:         B2_REGION,
+  forcePathStyle: true,
   credentials: {
     accessKeyId:     B2_KEY_ID,
     secretAccessKey: B2_APP_KEY,

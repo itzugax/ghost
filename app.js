@@ -123,7 +123,27 @@ function serverNow() {
   return Date.now() + (window.serverTimeOffset || 0);
 }
 
-// ─── Rate limiting ────────────────────────────────────────
+// ─── Contador global ──────────────────────────────────────
+
+async function loadTotalUploads() {
+  try {
+    const { data } = await db.from("stats").select("value").eq("key", "total_uploads").single();
+    if (!data) return;
+    const el = document.getElementById("total-uploads");
+    if (el) {
+      const n = Number(data.value).toLocaleString("es");
+      el.textContent = `✦ ${n} archivo${data.value === 1 ? "" : "s"} compartido${data.value === 1 ? "" : "s"} hasta ahora`;
+    }
+  } catch {}
+}
+
+async function incrementTotalUploads() {
+  try {
+    await db.rpc("increment_uploads");
+    loadTotalUploads(); // refrescar el número
+  } catch {}
+}
+
 // Límites por sesión (en memoria + localStorage)
 const RATE_LIMITS = {
   uploadsPerMinute: 15,       // max 15 archivos por minuto
@@ -724,6 +744,7 @@ async function uploadFiles(files) {
     }
 
     if (insertData?.id) myRecentDrops.set(insertData.id, TTL_SECONDS);
+    incrementTotalUploads();
 
     // ── 100% y cierre suave ──────────────────────────────
     progressBar.classList.remove("progress-pulse", "progress-indeterminate");
@@ -1050,6 +1071,7 @@ async function init() {
 
   setInterval(cleanExpired, 60_000);
   setInterval(calibrateServerTime, 5 * 60_000);
+  loadTotalUploads();
 
   if ("serviceWorker" in navigator) {
     navigator.serviceWorker.register("sw.js").catch(() => {});

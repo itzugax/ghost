@@ -1296,10 +1296,11 @@ async function showQR() {
 
 async function cleanExpired() {
   if (!roomId) return;
+  // Usar serverNow() con margen de 5s — evita borrar por desincronización residual
   const { data } = await db.from("drops")
     .select("id, storage_path, content_type")
     .eq("room_id", roomId)
-    .lt("expires_at", new Date().toISOString());
+    .lt("expires_at", new Date(serverNow() - 5000).toISOString());
   if (!data?.length) return;
   const paths = data.filter(d => d.content_type !== "text" && d.storage_path).map(d => d.storage_path);
   if (paths.length) await db.storage.from("ghost-drop").remove(paths);

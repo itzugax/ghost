@@ -1861,9 +1861,10 @@ footer {
   min-width: 0;
   width: 0;
   aspect-ratio: 1;
+  min-height: 52px;
   text-align: center;
   font-family: 'SF Mono', 'JetBrains Mono', 'Roboto Mono', ui-monospace, monospace;
-  font-size: clamp(0.9rem, 4vw, 1.375rem);
+  font-size: clamp(1rem, 5vw, 1.375rem);
   font-weight: 700;
   color: var(--text);
   background: rgba(120,120,128,0.08);

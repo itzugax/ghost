@@ -373,14 +373,44 @@ header {
   border-radius: 100px;
   overflow: hidden;
   height: 5px;
+  position: relative;
 }
 
 #progress-bar {
   height: 100%;
   background: var(--accent);
   border-radius: 100px;
-  transition: width 0.2s cubic-bezier(0.4,0,0.2,1);
+  transition: width 0.4s cubic-bezier(0.4,0,0.2,1);
   width: 0%;
+}
+
+/* Barra indeterminada — loop de izquierda a derecha */
+#progress-bar.progress-indeterminate {
+  width: 100% !important;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    var(--accent) 30%,
+    var(--accent-light) 60%,
+    transparent 100%
+  );
+  background-size: 200% 100%;
+  animation: indeterminate-slide 1.4s ease-in-out infinite;
+  transition: none;
+}
+
+@keyframes indeterminate-slide {
+  0%   { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+#progress-bar.progress-pulse {
+  animation: progress-glow 1.2s ease-in-out infinite;
+}
+
+@keyframes progress-glow {
+  0%, 100% { box-shadow: 0 0 4px var(--accent), 0 0 8px var(--accent); opacity: 1; }
+  50%       { box-shadow: 0 0 12px var(--accent), 0 0 24px var(--accent-light); opacity: 0.85; }
 }
 
 .progress-label {
@@ -485,11 +515,39 @@ header {
 /* ─── Footer ─────────────────────────────────────────────── */
 footer {
   margin-top: 3rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.875rem;
   font-size: 0.75rem;
   font-weight: 400;
   color: var(--text-4);
   text-align: center;
   letter-spacing: -0.01em;
+}
+
+.donate-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  background: rgba(120,120,128,0.08);
+  border: 1px solid var(--border-strong);
+  color: var(--text-3);
+  font-family: inherit;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  padding: 0.5rem 1rem;
+  border-radius: 100px;
+  text-decoration: none;
+  transition: all 0.2s ease;
+  letter-spacing: -0.01em;
+}
+
+.donate-link:hover {
+  background: rgba(255,149,0,0.1);
+  border-color: var(--warning);
+  color: var(--warning);
+  transform: scale(1.04);
 }
 
 /* ─── Responsive ─────────────────────────────────────────── */
@@ -902,10 +960,10 @@ footer {
 .ttl-bar {
   height: 100%;
   background: var(--accent);
-  transition: width 1s linear, background 0.5s;
+  /* Sin transition — la animamos con rAF para que sea fluida */
   width: 100%;
 }
-.drop-item:has(.timer-warn) .ttl-bar  { background: var(--warning); }
+.drop-item:has(.timer-warn) .ttl-bar   { background: var(--warning); }
 .drop-item:has(.timer-danger) .ttl-bar { background: var(--error); }
 
 /* ─── Compact mode ───────────────────────────────────────── */
@@ -959,4 +1017,220 @@ footer {
 }
 .logo-animate {
   animation: ghost-appear 0.7s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}
+
+/* ─── Ripple effect ──────────────────────────────────────── */
+.ripple-host { position: relative; overflow: hidden; }
+
+.ripple {
+  position: absolute;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.35);
+  transform: scale(0);
+  animation: ripple-expand 0.5s cubic-bezier(0.4,0,0.2,1) forwards;
+  pointer-events: none;
+}
+
+@keyframes ripple-expand {
+  to { transform: scale(4); opacity: 0; }
+}
+
+/* ─── Drop count pop animation ───────────────────────────── */
+.drop-count-pop {
+  animation: count-pop 0.35s cubic-bezier(0.34,1.56,0.64,1);
+}
+
+@keyframes count-pop {
+  0%   { transform: scale(1); }
+  50%  { transform: scale(1.6); color: var(--accent); }
+  100% { transform: scale(1); }
+}
+
+/* ─── Dropzone uploading state ───────────────────────────── */
+#dropzone.uploading {
+  border-color: var(--accent);
+  border-style: solid;
+  background: var(--accent-light);
+  pointer-events: none;
+}
+
+#dropzone.uploading .drop-icon {
+  animation: upload-bounce 0.6s ease infinite alternate;
+}
+
+@keyframes upload-bounce {
+  from { transform: translateY(0); }
+  to   { transform: translateY(-6px); }
+}
+
+/* ─── File preview before upload ─────────────────────────── */
+#upload-preview {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-top: 1rem;
+}
+
+.upload-preview-item {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.625rem 0.875rem;
+  background: rgba(120,120,128,0.06);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  animation: drop-in 0.2s ease forwards;
+}
+
+.upload-preview-icon { font-size: 1.25rem; flex-shrink: 0; }
+.upload-preview-name {
+  flex: 1;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  letter-spacing: -0.01em;
+}
+.upload-preview-size {
+  font-size: 0.75rem;
+  color: var(--text-3);
+  font-variant-numeric: tabular-nums;
+  flex-shrink: 0;
+}
+
+/* ─── Skeleton loader ────────────────────────────────────── */
+.skeleton {
+  background: linear-gradient(
+    90deg,
+    rgba(120,120,128,0.08) 25%,
+    rgba(120,120,128,0.16) 50%,
+    rgba(120,120,128,0.08) 75%
+  );
+  background-size: 200% 100%;
+  animation: skeleton-shimmer 1.4s ease infinite;
+  border-radius: var(--radius-sm);
+}
+
+@keyframes skeleton-shimmer {
+  0%   { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+.skeleton-item {
+  display: flex;
+  align-items: center;
+  gap: 0.875rem;
+  padding: 0.875rem 1rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+}
+
+.skeleton-thumb  { width: 44px; height: 44px; border-radius: 8px; flex-shrink: 0; }
+.skeleton-line   { height: 14px; border-radius: 6px; }
+.skeleton-short  { width: 40%; }
+.skeleton-long   { width: 70%; }
+.skeleton-text   { flex: 1; display: flex; flex-direction: column; gap: 0.5rem; }
+.skeleton-btn    { width: 64px; height: 32px; border-radius: 8px; flex-shrink: 0; }
+
+/* ─── Member avatars ─────────────────────────────────────── */
+.members-avatars {
+  display: flex;
+  align-items: center;
+  gap: -4px;
+  margin-top: 0.625rem;
+}
+
+.avatar {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  border: 2px solid var(--surface-solid);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.6875rem;
+  font-weight: 700;
+  color: #fff;
+  margin-left: -6px;
+  flex-shrink: 0;
+  transition: transform 0.2s;
+}
+
+.avatar:first-child { margin-left: 0; }
+.avatar:hover { transform: translateY(-2px) scale(1.1); z-index: 1; }
+
+/* Colores de avatares — basados en los colores de iOS */
+.avatar-0 { background: #007aff; }
+.avatar-1 { background: #34c759; }
+.avatar-2 { background: #ff9500; }
+.avatar-3 { background: #af52de; }
+.avatar-4 { background: #ff2d55; }
+.avatar-5 { background: #5ac8fa; }
+
+.avatar-typing {
+  background: rgba(120,120,128,0.2);
+  color: var(--text-3);
+}
+
+/* ─── Typing indicator ───────────────────────────────────── */
+.typing-indicator {
+  display: none;
+  align-items: center;
+  gap: 0.375rem;
+  font-size: 0.8125rem;
+  color: var(--text-3);
+  font-weight: 400;
+  letter-spacing: -0.01em;
+  padding: 0.5rem 0;
+}
+
+.typing-indicator.visible { display: flex; }
+
+.typing-dot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--text-3);
+  animation: typing-bounce 1.2s ease infinite;
+}
+.typing-dot:nth-child(2) { animation-delay: 0.2s; }
+.typing-dot:nth-child(3) { animation-delay: 0.4s; }
+
+@keyframes typing-bounce {
+  0%, 60%, 100% { transform: translateY(0); opacity: 0.4; }
+  30% { transform: translateY(-4px); opacity: 1; }
+}
+
+/* ─── Expire disintegration ──────────────────────────────── */
+.drop-expiring {
+  animation: disintegrate 0.6s cubic-bezier(0.4,0,0.2,1) forwards;
+}
+
+@keyframes disintegrate {
+  0%   { opacity: 1; transform: translateX(0) scale(1); filter: blur(0); }
+  40%  { opacity: 0.6; transform: translateX(8px) scale(0.98); filter: blur(1px); }
+  100% { opacity: 0; transform: translateX(24px) scale(0.94); filter: blur(4px); max-height: 0; padding: 0; margin: 0; }
+}
+
+/* ─── Uploading indicator en dropzone ───────────────────── */
+.dropzone-progress-ring {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+}
+
+/* ─── Pulse al llegar archivo nuevo ─────────────────────── */
+@keyframes new-drop-pulse {
+  0%   { box-shadow: 0 0 0 0 rgba(0,122,255,0.4); }
+  70%  { box-shadow: 0 0 0 8px rgba(0,122,255,0); }
+  100% { box-shadow: 0 0 0 0 rgba(0,122,255,0); }
+}
+
+.drop-pulse {
+  animation: new-drop-pulse 0.6s ease forwards;
 }

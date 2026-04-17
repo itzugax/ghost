@@ -123,7 +123,205 @@ function serverNow() {
   return Date.now() + (window.serverTimeOffset || 0);
 }
 
-// ─── Toast ─────────────────────────────────────────────────
+// ─── Rate limiting ────────────────────────────────────────
+// Límites por sesión (en memoria + localStorage)
+const RATE_LIMITS = {
+  uploadsPerMinute: 15,       // max 15 archivos por minuto
+  uploadsPerHour:   100,      // max 100 archivos por hora
+  maxBytesPerHour:  2 * 1024 * 1024 * 1024, // max 2GB por hora
+  textsPerMinute:   30,       // max 30 mensajes por minuto
+};
+
+function getRateLimitStore() {
+  try {
+    const raw = localStorage.getItem("ghostdrop-rl");
+    const store = raw ? JSON.parse(raw) : {};
+    const now = Date.now();
+    // Limpiar entradas viejas (> 1 hora)
+    Object.keys(store).forEach(k => {
+      store[k] = store[k].filter(t => now - t < 3_600_000);
+    });
+    return store;
+  } catch { return {}; }
+}
+
+function saveRateLimitStore(store) {
+  try { localStorage.setItem("ghostdrop-rl", JSON.stringify(store)); } catch {}
+}
+
+function checkRateLimit(type, bytes = 0) {
+  const store = getRateLimitStore();
+  const now = Date.now();
+  const uploads = store.uploads || [];
+  const texts   = store.texts   || [];
+  const bytelog = store.bytes   || [];
+
+  if (type === "file") {
+    const lastMinute = uploads.filter(t => now - t < 60_000);
+    if (lastMinute.length >= RATE_LIMITS.uploadsPerMinute) {
+      return { ok: false, msg: `Máximo ${RATE_LIMITS.uploadsPerMinute} archivos por minuto. Espera un momento.` };
+    }
+    if (uploads.length >= RATE_LIMITS.uploadsPerHour) {
+      return { ok: false, msg: `Máximo ${RATE_LIMITS.uploadsPerHour} archivos por hora.` };
+    }
+    const bytesThisHour = bytelog.reduce((a, b) => a + b, 0);
+    if (bytesThisHour + bytes > RATE_LIMITS.maxBytesPerHour) {
+      return { ok: false, msg: `Límite de 500 MB por hora alcanzado.` };
+    }
+  }
+
+  if (type === "text") {
+    const lastMinute = texts.filter(t => now - t < 60_000);
+    if (lastMinute.length >= RATE_LIMITS.textsPerMinute) {
+      return { ok: false, msg: `Máximo ${RATE_LIMITS.textsPerMinute} mensajes por minuto.` };
+    }
+  }
+
+  return { ok: true };
+}
+
+function recordRateLimit(type, bytes = 0) {
+  const store = getRateLimitStore();
+  const now = Date.now();
+  if (type === "file") {
+    store.uploads = [...(store.uploads || []), now];
+    store.bytes   = [...(store.bytes   || []), bytes];
+  }
+  if (type === "text") {
+    store.texts = [...(store.texts || []), now];
+  }
+  saveRateLimitStore(store);
+}
+
+function addRipple(el, e) {
+  const rect = el.getBoundingClientRect();
+  const size = Math.max(rect.width, rect.height);
+  const x = (e.clientX - rect.left) - size / 2;
+  const y = (e.clientY - rect.top) - size / 2;
+  const ripple = document.createElement("span");
+  ripple.className = "ripple";
+  ripple.style.cssText = `width:${size}px;height:${size}px;left:${x}px;top:${y}px`;
+  el.appendChild(ripple);
+  ripple.addEventListener("animationend", () => ripple.remove());
+}
+
+function makeRipple(selector) {
+  document.querySelectorAll(selector).forEach(el => {
+    el.classList.add("ripple-host");
+    el.addEventListener("click", e => addRipple(el, e));
+  });
+}
+
+// ─── Skeleton loader ──────────────────────────────────────
+function showSkeleton() {
+  filesList.innerHTML = Array(3).fill(`
+    <li class="skeleton-item">
+      <div class="skeleton skeleton-thumb"></div>
+      <div class="skeleton-text">
+        <div class="skeleton skeleton-line skeleton-long"></div>
+        <div class="skeleton skeleton-line skeleton-short"></div>
+      </div>
+      <div class="skeleton skeleton-btn"></div>
+    </li>
+  `).join("");
+}
+
+// ─── File preview before upload ───────────────────────────
+function showUploadPreview(files) {
+  let preview = document.getElementById("upload-preview");
+  if (!preview) {
+    preview = document.createElement("div");
+    preview.id = "upload-preview";
+    progressWrap.parentNode.insertBefore(preview, progressWrap.nextSibling.nextSibling);
+  }
+  preview.innerHTML = "";
+  Array.from(files).forEach(f => {
+    const div = document.createElement("div");
+    div.className = "upload-preview-item";
+    div.innerHTML = `
+      <span class="upload-preview-icon">${getFileIcon(f.name)}</span>
+      <span class="upload-preview-name">${f.name.replace(/</g,"&lt;")}</span>
+      <span class="upload-preview-size">${formatBytes(f.size)}</span>
+    `;
+    preview.appendChild(div);
+  });
+}
+
+function clearUploadPreview() {
+  const p = document.getElementById("upload-preview");
+  if (p) p.innerHTML = "";
+}
+
+// ─── Member avatars ───────────────────────────────────────
+const AVATAR_COLORS = ["avatar-0","avatar-1","avatar-2","avatar-3","avatar-4","avatar-5"];
+const memberColors = new Map(); // userId → colorClass
+
+function getAvatarColor(userId) {
+  if (!memberColors.has(userId)) {
+    memberColors.set(userId, AVATAR_COLORS[memberColors.size % AVATAR_COLORS.length]);
+  }
+  return memberColors.get(userId);
+}
+
+function updateMembersUI() {
+  if (!membersEl) return;
+  const state = presenceChannel?.presenceState?.() || {};
+  const users = Object.entries(state);
+  membersCount = users.length;
+
+  if (membersCount <= 1) {
+    membersEl.innerHTML = "";
+    return;
+  }
+
+  // Mostrar avatares de colores
+  const avatarsHtml = users.slice(0, 6).map(([uid]) => {
+    const color = getAvatarColor(uid);
+    const letter = uid.slice(0, 1).toUpperCase();
+    return `<div class="avatar ${color}" title="Usuario">${letter}</div>`;
+  }).join("");
+
+  const extra = membersCount > 6 ? `<div class="avatar avatar-5">+${membersCount - 6}</div>` : "";
+  membersEl.innerHTML = `<div class="members-avatars">${avatarsHtml}${extra}</div>`;
+}
+
+// ─── Typing indicator ─────────────────────────────────────
+let typingTimer = null;
+let isTyping = false;
+
+function broadcastTyping() {
+  if (!presenceChannel || !roomId) return;
+  presenceChannel.track({ online_at: new Date().toISOString(), typing: true });
+  clearTimeout(typingTimer);
+  typingTimer = setTimeout(() => {
+    presenceChannel.track({ online_at: new Date().toISOString(), typing: false });
+    isTyping = false;
+  }, 2000);
+}
+
+function updateTypingUI(state, myUserId) {
+  const typingEl = document.getElementById("typing-indicator");
+  if (!typingEl) return;
+  const othersTyping = Object.entries(state)
+    .filter(([uid, data]) => uid !== myUserId && data[0]?.typing);
+  if (othersTyping.length) {
+    typingEl.classList.add("visible");
+  } else {
+    typingEl.classList.remove("visible");
+  }
+}
+
+// ─── Expire animation ─────────────────────────────────────
+function animateExpire(fileId) {
+  const li = document.querySelector(`li[data-id="${fileId}"]`);
+  if (!li) return;
+  li.classList.add("drop-expiring");
+  li.addEventListener("animationend", () => {
+    li.remove();
+    updateDropCount();
+  }, { once: true });
+}
+
 
 let toastTimer = null;
 function showToast(msg, type = "info") {
@@ -246,6 +444,7 @@ async function ensureRoom(id) {
 }
 
 async function loadFiles() {
+  showSkeleton();
   const { data, error } = await db.from("drops")
     .select("*")
     .eq("room_id", roomId)
@@ -388,22 +587,34 @@ function startFileTimer(fileId, secs, totalSecs) {
   if (secs <= 0) return;
   const total = totalSecs ?? secs;
   let remaining = secs;
+
+  // Actualizar color y texto cada segundo
   const el = document.getElementById(`t-${fileId}`);
-  if (el) updateTimerColor(el, remaining, total);
-  const bar = document.getElementById(`bar-${fileId}`);
-  if (bar) bar.style.width = Math.max(0, (remaining / total) * 100) + "%";
+  if (el) { el.textContent = formatCountdown(remaining); updateTimerColor(el, remaining, total); }
+
+  // rAF loop para la barra — fluido a 60fps
+  const startTime = performance.now();
+  const startRemaining = remaining;
+
+  function rafBar() {
+    const bar = document.getElementById(`bar-${fileId}`);
+    if (!bar) return;
+    const elapsed = (performance.now() - startTime) / 1000;
+    const current = Math.max(0, startRemaining - elapsed);
+    bar.style.width = Math.max(0, (current / total) * 100) + "%";
+    if (current > 0) requestAnimationFrame(rafBar);
+  }
+  requestAnimationFrame(rafBar);
+
   fileTimers[fileId] = setInterval(() => {
     remaining--;
     const el = document.getElementById(`t-${fileId}`);
     if (!el) { clearInterval(fileTimers[fileId]); delete fileTimers[fileId]; return; }
     updateTimerColor(el, remaining, total);
-    const bar = document.getElementById(`bar-${fileId}`);
-    if (bar) bar.style.width = Math.max(0, (remaining / total) * 100) + "%";
     if (remaining <= 0) {
       clearInterval(fileTimers[fileId]);
       delete fileTimers[fileId];
-      document.querySelector(`li[data-id="${fileId}"]`)?.remove();
-      updateDropCount();
+      animateExpire(fileId);
     } else {
       el.textContent = formatCountdown(remaining);
     }
@@ -412,9 +623,18 @@ function startFileTimer(fileId, secs, totalSecs) {
 
 function updateDropCount(n) {
   const count = n ?? filesList.querySelectorAll("li:not(.empty)").length;
-  dropCount.textContent = count ? `· ${count}` : "";
+  const el = dropCount;
+  const prev = el.textContent;
+  const next = count ? `· ${count}` : "";
+  el.textContent = next;
   if (count === 0) {
     filesList.innerHTML = `<li class="empty">No hay nada en esta sala aún.</li>`;
+  }
+  // Pop animation cuando el número cambia
+  if (prev !== next && count > 0) {
+    el.classList.remove("drop-count-pop");
+    void el.offsetWidth; // reflow
+    el.classList.add("drop-count-pop");
   }
 }
 
@@ -425,23 +645,31 @@ async function uploadFiles(files) {
   let uploaded = 0;
 
   for (const file of Array.from(files)) {
-    if (file.size > 50 * 1024 * 1024) { showToast(`${file.name}: supera 50 MB`, "error"); continue; }
+    if (file.size > 100 * 1024 * 1024) { showToast(`${file.name}: supera 100 MB`, "error"); continue; }
     if (file.size === 0) continue;
+
+    // Rate limit check
+    const rl = checkRateLimit("file", file.size);
+    if (!rl.ok) { showToast(rl.msg, "error"); break; }
+    recordRateLimit("file", file.size);
 
     // ── Mostrar progreso ──────────────────────────────────
     progressWrap.style.display = "block";
     progressBar.style.width = "0%";
+    progressBar.classList.add("progress-indeterminate");
     setProgressLabel(0, file.size);
-    setStatus(`Subiendo ${file.name}…`, "info");
+    showToast(`Subiendo ${file.name.slice(0, 20)}…`, "info");
+    showUploadPreview(files);
+    dropzone.classList.add("uploading");
 
     const ext  = file.name.includes(".") ? file.name.split(".").pop() : "bin";
     const path = `${roomId}/${Date.now()}_${Math.random().toString(36).slice(2)}.${ext}`;
 
     // Velocidad de simulación proporcional al tamaño:
     // archivos pequeños (<1MB) van rápido, grandes van lento
-    const stepMs   = 150;
-    const totalSteps = Math.max(10, Math.min(60, Math.floor(file.size / (1024 * 100)))); // pasos según tamaño
-    const stepPct  = 82 / totalSteps; // llega hasta 82%
+    const stepMs     = 150;
+    const totalSteps = Math.max(10, Math.min(60, Math.floor(file.size / (1024 * 100))));
+    const stepPct    = 82 / totalSteps;
     let prog = 0;
     const ticker = setInterval(() => {
       prog = Math.min(prog + stepPct, 82);
@@ -456,41 +684,60 @@ async function uploadFiles(files) {
 
     if (upErr) {
       progressWrap.style.display = "none";
+      progressBar.classList.remove("progress-pulse", "progress-indeterminate");
       setProgressLabel(0, 0);
+      dropzone.classList.remove("uploading");
       showToast(`Error: ${upErr.message}`, "error");
       continue;
     }
 
-    // Subida completa → expiresAt basado en tiempo del servidor
+    // ── Subida terminada → creep lento hasta 98% con pulso ──
+    progressBar.classList.add("progress-pulse");
+    prog = 85;
+    progressBar.style.width = prog + "%";
+    setProgressLabel(0.85, file.size);
+    document.getElementById("progress-label").textContent = "Finalizando… No cierres la pestaña";
+
+    // Creep artificial 85 → 98% mientras se hace el INSERT
+    const creep = setInterval(() => {
+      if (prog < 98) {
+        prog = Math.min(prog + 0.4, 98);
+        progressBar.style.width = prog + "%";
+      }
+    }, 200);
+
     const expiresAt = new Date(serverNow() + TTL_SECONDS * 1000).toISOString();
-
-    progressBar.style.width = "95%";
-    setProgressLabel(0.95, file.size);
-
     const { error: dbErr, data: insertData } = await db.from("drops").insert({
       room_id: roomId, file_name: file.name, file_size: file.size,
       storage_path: path, expires_at: expiresAt, content_type: "file",
     }).select("id").single();
 
+    clearInterval(creep);
+
     if (dbErr) {
       await db.storage.from("ghost-drop").remove([path]);
       progressWrap.style.display = "none";
+      progressBar.classList.remove("progress-pulse", "progress-indeterminate");
+      dropzone.classList.remove("uploading");
       showToast(`Error BD: ${dbErr.message}`, "error");
       continue;
     }
 
-    // Registrar que este drop es nuestro, con el TTL exacto elegido
     if (insertData?.id) myRecentDrops.set(insertData.id, TTL_SECONDS);
 
+    // ── 100% y cierre suave ──────────────────────────────
+    progressBar.classList.remove("progress-pulse", "progress-indeterminate");
     progressBar.style.width = "100%";
     setProgressLabel(1, file.size);
     uploaded++;
-    await new Promise(r => setTimeout(r, 600));
+    await new Promise(r => setTimeout(r, 500));
     progressWrap.style.display = "none";
     setProgressLabel(0, 0);
+    dropzone.classList.remove("uploading");
+    clearUploadPreview();
   }
 
-  if (uploaded) setStatus(`${uploaded} archivo(s) compartido(s)`, "success");
+  if (uploaded) showToast(`${uploaded} archivo(s) compartido(s) ✓`, "success");
 }
 
 function setProgressLabel(ratio, totalBytes) {
@@ -506,6 +753,10 @@ function setProgressLabel(ratio, totalBytes) {
 async function sendText() {
   const text = textInput.value.trim();
   if (!text || !roomId) return;
+
+  const rl = checkRateLimit("text");
+  if (!rl.ok) { showToast(rl.msg, "error"); return; }
+  recordRateLimit("text");
   const expiresAt = new Date(serverNow() + TTL_SECONDS * 1000).toISOString();
   const { error, data: insertData } = await db.from("drops").insert({
     room_id: roomId, file_name: text, file_size: text.length,
@@ -515,7 +766,7 @@ async function sendText() {
   // Registrar TTL exacto para el timer local
   if (insertData?.id) myRecentDrops.set(insertData.id, TTL_SECONDS);
   textInput.value = "";
-  setStatus("Texto compartido", "success");
+  showToast("Texto compartido ✓", "success");
 }
 
 // ─── Download ──────────────────────────────────────────────
@@ -531,12 +782,8 @@ async function downloadAndDestroy(storagePath, dropId, fileName) {
   haptic([10, 50, 10]);
   recordDownload(fileName, roomId);
 
-  await Promise.all([
-    db.from("drops").delete().eq("id", dropId),
-    db.storage.from("ghost-drop").remove([storagePath]),
-  ]);
-
-  setStatus("Descargado y eliminado", "warn");
+  // Ya NO se borra al descargar — dura hasta que expire el TTL
+  showToast("Descargando…", "info");
 }
 
 // ─── Realtime drops ────────────────────────────────────────
@@ -581,10 +828,9 @@ function prependDrop(f, exactTTL = null) {
   const li = buildDropEl(f);
   li.classList.add("drop-new");
   filesList.prepend(li);
-  li.getBoundingClientRect(); // forzar reflow
-  li.classList.add("drop-visible");
+  li.getBoundingClientRect();
+  li.classList.add("drop-visible", "drop-pulse");
   attachDropEvents(li);
-  // Si es nuestro propio drop, usar TTL exacto; si no, usar expires_at del servidor
   const secs = exactTTL !== null ? exactTTL : getSecsLeft(f.expires_at);
   startFileTimer(f.id, secs, exactTTL ?? secs);
   updateDropCount();
@@ -606,19 +852,17 @@ function subscribeToPresence() {
       const state = presenceChannel.presenceState();
       membersCount = Object.keys(state).length;
       updateMembersUI();
+      updateTypingUI(state, userId);
     })
     .on("presence", { event: "join" }, ({ key }) => {
       if (key !== userId) {
-        showToast(`Alguien entró a la sala`, "info");
+        showToast("Alguien entró a la sala", "info");
         playPing();
       }
     })
-    .on("presence", { event: "leave" }, () => {
-      // El sync se actualiza solo
-    })
     .subscribe(async (status) => {
       if (status === "SUBSCRIBED") {
-        await presenceChannel.track({ online_at: new Date().toISOString() });
+        await presenceChannel.track({ online_at: new Date().toISOString(), typing: false });
       }
     });
 }
@@ -710,6 +954,7 @@ async function cleanExpired() {
   const paths = data.filter(d => d.content_type !== "text" && d.storage_path).map(d => d.storage_path);
   if (paths.length) await db.storage.from("ghost-drop").remove(paths);
   await db.from("drops").delete().in("id", data.map(d => d.id));
+  console.log(`Cleaned ${data.length} expired drops`);
 }
 
 // ─── Eventos ───────────────────────────────────────────────
@@ -748,7 +993,31 @@ qrModal.addEventListener("click", e => { if (e.target === qrModal) hide(qrModal)
 leaveBtn.addEventListener("click", leaveRoom);
 sendTextBtn.addEventListener("click", sendText);
 textInput.addEventListener("keydown", e => { if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) sendText(); });
-notifyBtn.addEventListener("click", requestNotifications);
+textInput.addEventListener("input", () => broadcastTyping());
+// ─── Invitar ───────────────────────────────────────────────
+async function inviteToRoom() {
+  const url = `${location.origin}${location.pathname}?sala=${roomId}`;
+  // API nativa de compartir (móvil)
+  if (navigator.share) {
+    try {
+      await navigator.share({
+        title: "Ghost Drop",
+        text: `Únete a mi sala ${roomId} en Ghost Drop`,
+        url,
+      });
+      return;
+    } catch (e) {
+      if (e.name === "AbortError") return; // usuario canceló
+    }
+  }
+  // Fallback: copiar al portapapeles
+  navigator.clipboard.writeText(url).then(() => {
+    showToast("Link copiado al portapapeles", "success");
+    haptic();
+  });
+}
+
+document.getElementById("invite-btn")?.addEventListener("click", inviteToRoom);
 
 // ─── Init ──────────────────────────────────────────────────
 
@@ -761,6 +1030,7 @@ async function init() {
   renderRecent();
 
   document.getElementById("compact-btn")?.addEventListener("click", toggleCompact);
+  makeRipple(".btn-primary, .btn-secondary, .badge-btn, .dl-btn");
 
   // Calibrar ANTES de cualquier operación para que serverNow() sea correcto
   await calibrateServerTime().catch(() => {});
@@ -786,3 +1056,5 @@ async function init() {
 }
 
 init();
+
+notifyBtn.addEventListener("click", requestNotifications);

@@ -933,17 +933,38 @@ footer {
   to   { opacity: 1; transform: translateX(-50%) translateY(0) scale(1); }
 }
 
-/* ─── Drop-new animation ─────────────────────────────────── */
+/* ─── Timer blink últimos 10s ────────────────────────────── */
+.ftimer.timer-blink {
+  animation: timer-blink 0.8s ease-in-out infinite !important;
+}
+
+@keyframes timer-blink {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.25; }
+}
+
+/* ─── AirDrop-style drop-in ──────────────────────────────── */
 .drop-new {
-  animation: drop-in 0.3s cubic-bezier(0.34,1.56,0.64,1) forwards;
+  animation: airdrop-in 0.45s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
 }
 
-@keyframes drop-in {
-  from { opacity: 0; transform: translateY(-8px) scale(0.98); }
-  to   { opacity: 1; transform: translateY(0) scale(1); }
+@keyframes airdrop-in {
+  0%   { opacity: 0; transform: scale(0.82) translateY(-10px); filter: blur(3px); }
+  60%  { opacity: 1; filter: blur(0); }
+  100% { opacity: 1; transform: scale(1) translateY(0); filter: blur(0); }
 }
 
-/* ─── Responsive extras ──────────────────────────────────── */
+/* ─── iOS-style slide-out al expirar ─────────────────────── */
+.drop-expiring {
+  animation: ios-dismiss 0.4s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+  pointer-events: none;
+}
+
+@keyframes ios-dismiss {
+  0%   { opacity: 1; transform: translateX(0) scale(1); max-height: 80px; }
+  40%  { opacity: 0.4; transform: translateX(12px) scale(0.97); }
+  100% { opacity: 0; transform: translateX(40px) scale(0.94); max-height: 0; padding: 0; margin: 0; border-width: 0; }
+}
 @media (max-width: 600px) {
   .text-actions { flex-direction: column; align-items: stretch; }
   .text-actions .btn-primary { width: 100%; justify-content: center; }
@@ -976,7 +997,7 @@ footer {
 .ttl-bar {
   height: 100%;
   background: var(--accent);
-  /* Sin transition — la animamos con rAF para que sea fluida */
+  /* transition se aplica dinámicamente desde JS para evitar animación inicial */
   width: 100%;
 }
 .drop-item:has(.timer-warn) .ttl-bar   { background: var(--warning); }

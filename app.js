@@ -527,7 +527,10 @@ function renderDrops(items) {
     li.classList.add("drop-visible");
     filesList.appendChild(li);
     const secs = getSecsLeft(f.expires_at);
-    startFileTimer(f.id, secs, secs);
+    const total = f.created_at
+      ? Math.round((new Date(f.expires_at) - new Date(f.created_at)) / 1000)
+      : TTL_SECONDS;
+    startFileTimer(f.id, secs, total);
   });
 
   attachDropEvents(filesList);
@@ -535,9 +538,14 @@ function renderDrops(items) {
 
 function buildDropEl(f) {
   const secsLeft = getSecsLeft(f.expires_at);
+  // TTL total: diferencia entre expires_at y created_at (si existe), o TTL_SECONDS
+  const totalSecs = f.created_at
+    ? Math.round((new Date(f.expires_at) - new Date(f.created_at)) / 1000)
+    : TTL_SECONDS;
   const safeName = f.file_name.replace(/</g, "&lt;").replace(/>/g, "&gt;");
   const li = document.createElement("li");
   li.dataset.id = f.id;
+  li.dataset.total = totalSecs; // guardar para el timer
 
   if (f.content_type === "text") {
     const isLink = /^https?:\/\//i.test(f.file_name);
@@ -556,7 +564,7 @@ function buildDropEl(f) {
     const icon  = getFileIcon(f.file_name);
     const thumb = isImage(f.file_name) ? `<div class="thumb-wrap" id="thumb-${f.id}"></div>` : "";
     const previewBtn = isImage(f.file_name)
-      ? `<button class="dl-btn preview-btn" data-id="${f.id}">👁 Ver</button>` : "";
+      ? `<button class="dl-btn preview-btn" data-id="${f.id}">👁</button>` : "";
     li.className = "drop-item drop-file";
     li.innerHTML = `
       ${thumb}
@@ -627,20 +635,31 @@ function startFileTimer(fileId, secs, totalSecs) {
   const total = totalSecs ?? secs;
   let remaining = secs;
 
-  // Actualizar color y texto cada segundo
   const el = document.getElementById(`t-${fileId}`);
   if (el) { el.textContent = formatCountdown(remaining); updateTimerColor(el, remaining, total); }
 
-  // rAF loop para la barra — fluido a 60fps
+  // Barra inicial sincronizada con el porcentaje real
+  const bar = document.getElementById(`bar-${fileId}`);
+  if (bar) {
+    const pct = Math.max(0, (remaining / total) * 100);
+    // Sin transición para el valor inicial — evita animación desde 100%
+    bar.style.transition = "none";
+    bar.style.width = pct + "%";
+    // Forzar reflow y activar transición fluida
+    bar.getBoundingClientRect();
+    bar.style.transition = "width 1s linear";
+  }
+
+  // rAF para actualizar la barra a 60fps
   const startTime = performance.now();
   const startRemaining = remaining;
 
   function rafBar() {
-    const bar = document.getElementById(`bar-${fileId}`);
-    if (!bar) return;
+    const b = document.getElementById(`bar-${fileId}`);
+    if (!b) return;
     const elapsed = (performance.now() - startTime) / 1000;
     const current = Math.max(0, startRemaining - elapsed);
-    bar.style.width = Math.max(0, (current / total) * 100) + "%";
+    b.style.width = Math.max(0, (current / total) * 100) + "%";
     if (current > 0) requestAnimationFrame(rafBar);
   }
   requestAnimationFrame(rafBar);
@@ -650,6 +669,12 @@ function startFileTimer(fileId, secs, totalSecs) {
     const el = document.getElementById(`t-${fileId}`);
     if (!el) { clearInterval(fileTimers[fileId]); delete fileTimers[fileId]; return; }
     updateTimerColor(el, remaining, total);
+
+    // Parpadeo en los últimos 10 segundos
+    if (remaining <= 10 && remaining > 0) {
+      el.classList.add("timer-blink");
+    }
+
     if (remaining <= 0) {
       clearInterval(fileTimers[fileId]);
       delete fileTimers[fileId];

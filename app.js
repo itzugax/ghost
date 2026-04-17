@@ -129,17 +129,23 @@ async function loadTotalUploads() {
   const el = document.getElementById("total-uploads");
   if (!el) return;
   try {
-    const { data, error } = await db.from("stats").select("value").eq("key", "total_uploads").single();
-    if (error || !data) {
-      // Reintentar una vez después de 3 segundos
-      setTimeout(loadTotalUploads, 3000);
+    const { data, error } = await db
+      .from("stats")
+      .select("value")
+      .eq("key", "total_uploads")
+      .single();
+
+    if (error) {
+      console.warn("stats error:", error.message);
+      setTimeout(loadTotalUploads, 4000);
       return;
     }
-    const n = Number(data.value);
-    if (n === 0) { el.textContent = ""; return; } // ocultar si es 0
+
+    const n = parseInt(data?.value ?? 0, 10);
     el.textContent = `✦ ${n.toLocaleString("es")} archivo${n === 1 ? "" : "s"} compartido${n === 1 ? "" : "s"} hasta ahora`;
-  } catch {
-    setTimeout(loadTotalUploads, 5000); // retry en 5s si hay error de red
+  } catch (e) {
+    console.warn("loadTotalUploads catch:", e);
+    setTimeout(loadTotalUploads, 5000);
   }
 }
 

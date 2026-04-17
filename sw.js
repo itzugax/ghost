@@ -1,4 +1,4 @@
-const CACHE = "ghostdrop-v1";
+const CACHE = "ghostdrop-v2";
 const ASSETS = ["./", "./index.html", "./app.js", "./style.css", "./supabase-config.js", "./supabase.min.js"];
 
 self.addEventListener("install", e => {

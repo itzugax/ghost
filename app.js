@@ -126,15 +126,21 @@ function serverNow() {
 // ─── Contador global ──────────────────────────────────────
 
 async function loadTotalUploads() {
+  const el = document.getElementById("total-uploads");
+  if (!el) return;
   try {
-    const { data } = await db.from("stats").select("value").eq("key", "total_uploads").single();
-    if (!data) return;
-    const el = document.getElementById("total-uploads");
-    if (el) {
-      const n = Number(data.value).toLocaleString("es");
-      el.textContent = `✦ ${n} archivo${data.value === 1 ? "" : "s"} compartido${data.value === 1 ? "" : "s"} hasta ahora`;
+    const { data, error } = await db.from("stats").select("value").eq("key", "total_uploads").single();
+    if (error || !data) {
+      // Reintentar una vez después de 3 segundos
+      setTimeout(loadTotalUploads, 3000);
+      return;
     }
-  } catch {}
+    const n = Number(data.value);
+    if (n === 0) { el.textContent = ""; return; } // ocultar si es 0
+    el.textContent = `✦ ${n.toLocaleString("es")} archivo${n === 1 ? "" : "s"} compartido${n === 1 ? "" : "s"} hasta ahora`;
+  } catch {
+    setTimeout(loadTotalUploads, 5000); // retry en 5s si hay error de red
+  }
 }
 
 async function incrementTotalUploads() {
@@ -396,14 +402,22 @@ document.querySelectorAll(".ttl-btn").forEach(btn => {
 
 async function calibrateServerTime() {
   try {
-    const t0 = Date.now();
-    const { data, error } = await db.rpc("get_server_time").single();
-    const t1 = Date.now();
-    if (!error && data) {
-      const serverMs = new Date(data).getTime();
-      const latency  = (t1 - t0) / 2;
-      window.serverTimeOffset = serverMs - (t0 + latency);
-      console.log(`Server offset: ${window.serverTimeOffset}ms (latency: ${latency}ms)`);
+    // 3 pings para mayor precisión — usamos la mediana
+    const samples = [];
+    for (let i = 0; i < 3; i++) {
+      const t0 = Date.now();
+      const { data, error } = await db.rpc("get_server_time").single();
+      const t1 = Date.now();
+      if (!error && data) {
+        const latency  = (t1 - t0) / 2;
+        const serverMs = new Date(data).getTime();
+        samples.push(serverMs - (t0 + latency));
+      }
+    }
+    if (samples.length) {
+      samples.sort((a, b) => a - b);
+      window.serverTimeOffset = samples[Math.floor(samples.length / 2)];
+      console.log(`Server offset: ${window.serverTimeOffset}ms`);
     }
   } catch {
     window.serverTimeOffset = 0;
@@ -505,10 +519,10 @@ function renderDrops(items) {
 
   active.forEach(f => {
     const li = buildDropEl(f);
-    li.classList.add("drop-visible"); // ya visible al cargar
+    li.classList.add("drop-visible");
     filesList.appendChild(li);
-    const secsLeft = getSecsLeft(f.expires_at);
-    startFileTimer(f.id, secsLeft, secsLeft);
+    const secs = getSecsLeft(f.expires_at);
+    startFileTimer(f.id, secs, secs);
   });
 
   attachDropEvents(filesList);
@@ -793,18 +807,29 @@ async function sendText() {
 // ─── Download ──────────────────────────────────────────────
 
 async function downloadAndDestroy(storagePath, dropId, fileName) {
-  setStatus("Descargando…", "info");
-  const { data, error } = await db.storage.from("ghost-drop").download(storagePath);
-  if (error) { showToast(`Error: ${error.message}`, "error"); return; }
+  showToast("Preparando descarga…", "info");
 
-  const url = URL.createObjectURL(data);
-  Object.assign(document.createElement("a"), { href: url, download: fileName }).click();
-  URL.revokeObjectURL(url);
+  // Generar URL firmada — el browser descarga directo desde Supabase
+  // sin pasar el archivo por el cliente (mucho más rápido)
+  const { data, error } = await db.storage
+    .from("ghost-drop")
+    .createSignedUrl(storagePath, 60); // válida 60 segundos
+
+  if (error) {
+    showToast(`Error: ${error.message}`, "error");
+    return;
+  }
+
+  // Abrir la URL firmada directamente — descarga instantánea
+  const a = document.createElement("a");
+  a.href = data.signedUrl;
+  a.download = fileName;
+  a.target = "_blank";
+  a.click();
+
   haptic([10, 50, 10]);
   recordDownload(fileName, roomId);
-
-  // Ya NO se borra al descargar — dura hasta que expire el TTL
-  showToast("Descargando…", "info");
+  showToast("Descarga iniciada", "success");
 }
 
 // ─── Realtime drops ────────────────────────────────────────
@@ -852,8 +877,10 @@ function prependDrop(f, exactTTL = null) {
   li.getBoundingClientRect();
   li.classList.add("drop-visible", "drop-pulse");
   attachDropEvents(li);
-  const secs = exactTTL !== null ? exactTTL : getSecsLeft(f.expires_at);
-  startFileTimer(f.id, secs, exactTTL ?? secs);
+  // Siempre usar expires_at del servidor — fuente de verdad única
+  // para que todos los dispositivos muestren el mismo tiempo
+  const secs = getSecsLeft(f.expires_at);
+  startFileTimer(f.id, secs, secs);
   updateDropCount();
 }
 

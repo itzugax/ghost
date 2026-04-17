@@ -840,6 +840,11 @@ async function sendText() {
 // ─── Download ──────────────────────────────────────────────
 
 async function downloadAndDestroy(storagePath, dropId, fileName) {
+  // Si es texto (storage_path vacío), no hay nada que descargar desde B2
+  if (!storagePath) {
+    showToast("Este es un texto, usa Copiar", "warn");
+    return;
+  }
   showToast("Preparando descarga…", "info");
   try {
     const url = await getB2DownloadUrl(storagePath, fileName);

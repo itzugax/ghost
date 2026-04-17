@@ -713,6 +713,22 @@ async function loadFiles() {
 
 // ─── Render ────────────────────────────────────────────────
 
+function getMimeFromName(name) {
+  const ext = (name.split(".").pop() || "").toLowerCase();
+  const map = {
+    jpg:"image/jpeg", jpeg:"image/jpeg", png:"image/png", gif:"image/gif",
+    webp:"image/webp", svg:"image/svg+xml", mp4:"video/mp4", mov:"video/quicktime",
+    avi:"video/x-msvideo", mkv:"video/x-matroska", mp3:"audio/mpeg",
+    wav:"audio/wav", flac:"audio/flac", pdf:"application/pdf",
+    doc:"application/msword", docx:"application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    xls:"application/vnd.ms-excel", xlsx:"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    zip:"application/zip", rar:"application/x-rar-compressed",
+    txt:"text/plain", md:"text/markdown", json:"application/json",
+    js:"text/javascript", ts:"text/typescript", html:"text/html", css:"text/css",
+  };
+  return map[ext] || "application/octet-stream";
+}
+
 function getFileIcon(name) {
   const ext = (name.split(".").pop() || "").toLowerCase();
   const map = {
@@ -963,7 +979,13 @@ function uploadWithProgress(url, file, headers) {
       if (xhr.status >= 200 && xhr.status < 300) {
         resolve(JSON.parse(xhr.responseText || "{}"));
       } else {
-        reject(new Error(`HTTP ${xhr.status}: ${xhr.responseText}`));
+        // Intentar parsear el mensaje de error de Supabase
+        let msg = `HTTP ${xhr.status}`;
+        try {
+          const body = JSON.parse(xhr.responseText);
+          msg = body.error || body.message || msg;
+        } catch {}
+        reject(new Error(msg));
       }
     });
     xhr.addEventListener("error", () => reject(new Error("Network error")));
@@ -1006,9 +1028,9 @@ async function uploadFiles(files) {
     try {
       await uploadWithProgress(uploadUrl, file, {
         "Authorization": `Bearer ${window.SUPABASE_ANON_KEY}`,
-        "x-upsert": "false",
-        "Content-Type": file.type || "application/octet-stream",
-        "Cache-Control": "0",
+        "x-upsert": "true",
+        "Content-Type": file.type || getMimeFromName(file.name),
+        "Cache-Control": "3600",
       });
     } catch (e) {
       upErr = e;

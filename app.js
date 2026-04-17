@@ -116,7 +116,7 @@ function showImagePreview(url, name) {
 // para dispositivos que se unen DESPUÉS de que el archivo fue subido.
 
 function getSecsLeft(expiresAt) {
-  return Math.max(0, Math.floor((new Date(expiresAt).getTime() - Date.now()) / 1000));
+  return Math.max(0, Math.floor((new Date(expiresAt).getTime() - serverNow()) / 1000));
 }
 
 function serverNow() {
@@ -156,7 +156,37 @@ async function incrementTotalUploads() {
   } catch {}
 }
 
-// Límites por sesión (en memoria + localStorage)
+// ─── Storage provider (Backblaze B2 via Vercel Function) ──
+
+async function uploadToB2(file, roomId) {
+  const res = await fetch("/api/upload", {
+    method: "POST",
+    headers: {
+      "Content-Type": file.type || "application/octet-stream",
+      "x-file-name":  file.name,
+      "x-room-id":    roomId,
+    },
+    body: file,
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ error: res.statusText }));
+    throw new Error(err.error || "Upload failed");
+  }
+  return res.json(); // { key, url }
+}
+
+async function getB2DownloadUrl(key, filename) {
+  const res = await fetch(`/api/download?key=${encodeURIComponent(key)}&filename=${encodeURIComponent(filename)}`);
+  if (!res.ok) throw new Error("Could not get download URL");
+  const { url } = await res.json();
+  return url;
+}
+
+async function deleteFromB2(key) {
+  await fetch(`/api/delete?key=${encodeURIComponent(key)}`, { method: "DELETE" });
+}
+
+// ─── Límites por sesión ────────────────────────────────────
 const RATE_LIMITS = {
   uploadsPerMinute: 15,       // max 15 archivos por minuto
   uploadsPerHour:   100,      // max 100 archivos por hora
@@ -628,26 +658,31 @@ function startFileTimer(fileId, secs, totalSecs) {
   const total = totalSecs ?? secs;
   let remaining = secs;
 
-  // Actualizar color y texto cada segundo
   const el = document.getElementById(`t-${fileId}`);
   if (el) { el.textContent = formatCountdown(remaining); updateTimerColor(el, remaining, total); }
 
-  // rAF loop para la barra — fluido a 60fps
-  const startTime = performance.now();
-  const startRemaining = remaining;
+  // rAF para la barra — usa serverNow() como base
+  const startServerTime = serverNow();
+  const startRemaining  = remaining;
 
   function rafBar() {
     const bar = document.getElementById(`bar-${fileId}`);
     if (!bar) return;
-    const elapsed = (performance.now() - startTime) / 1000;
+    const elapsed = (serverNow() - startServerTime) / 1000;
     const current = Math.max(0, startRemaining - elapsed);
     bar.style.width = Math.max(0, (current / total) * 100) + "%";
     if (current > 0) requestAnimationFrame(rafBar);
   }
   requestAnimationFrame(rafBar);
 
+  // Tick cada segundo basado en serverNow()
   fileTimers[fileId] = setInterval(() => {
-    remaining--;
+    remaining = getSecsLeft(
+      new Date(serverNow() + (secs - remaining + remaining) * 1000 - (serverNow() - startServerTime)).toISOString()
+    );
+    // Más simple: decrementar y recalcular desde el offset
+    remaining = Math.max(0, startRemaining - Math.floor((serverNow() - startServerTime) / 1000));
+
     const el = document.getElementById(`t-${fileId}`);
     if (!el) { clearInterval(fileTimers[fileId]); delete fileTimers[fileId]; return; }
     updateTimerColor(el, remaining, total);
@@ -702,27 +737,12 @@ async function uploadFiles(files) {
     showUploadPreview(files);
     dropzone.classList.add("uploading");
 
-    const ext  = file.name.includes(".") ? file.name.split(".").pop() : "bin";
-    const path = `${roomId}/${Date.now()}_${Math.random().toString(36).slice(2)}.${ext}`;
-
-    // Velocidad de simulación proporcional al tamaño:
-    // archivos pequeños (<1MB) van rápido, grandes van lento
-    const stepMs     = 150;
-    const totalSteps = Math.max(10, Math.min(60, Math.floor(file.size / (1024 * 100))));
-    const stepPct    = 82 / totalSteps;
-    let prog = 0;
-    const ticker = setInterval(() => {
-      prog = Math.min(prog + stepPct, 82);
-      progressBar.style.width = prog + "%";
-      setProgressLabel(prog / 100, file.size);
-    }, stepMs);
-
-    const { error: upErr } = await db.storage.from("ghost-drop")
-      .upload(path, file, { cacheControl: "0", upsert: false });
-
-    clearInterval(ticker);
-
-    if (upErr) {
+    let b2Key, b2Url;
+    try {
+      const result = await uploadToB2(file, roomId);
+      b2Key = result.key;
+      b2Url = result.url;
+    } catch (upErr) {
       progressWrap.style.display = "none";
       progressBar.classList.remove("progress-pulse", "progress-indeterminate");
       setProgressLabel(0, 0);
@@ -731,28 +751,23 @@ async function uploadFiles(files) {
       continue;
     }
 
-    // ── Subida terminada → creep lento hasta 98% con pulso ──
-    progressBar.classList.add("progress-pulse");
-    prog = 85;
-    progressBar.style.width = prog + "%";
-    setProgressLabel(0.85, file.size);
-    document.getElementById("progress-label").textContent = "Finalizando… No cierres la pestaña";
-
-    // Creep artificial 85 → 98% mientras se hace el INSERT
-    const creep = setInterval(() => {
-      if (prog < 98) {
-        prog = Math.min(prog + 0.4, 98);
-        progressBar.style.width = prog + "%";
-      }
-    }, 200);
-
+    // Subida completa → expiresAt basado en tiempo del servidor
     const expiresAt = new Date(serverNow() + TTL_SECONDS * 1000).toISOString();
-    const { error: dbErr, data: insertData } = await db.from("drops").insert({
-      room_id: roomId, file_name: file.name, file_size: file.size,
-      storage_path: path, expires_at: expiresAt, content_type: "file",
-    }).select("id").single();
 
-    clearInterval(creep);
+    progressBar.classList.remove("progress-indeterminate");
+    progressBar.classList.add("progress-pulse");
+    progressBar.style.width = "90%";
+    document.getElementById("progress-label").textContent = "Finalizando…";
+
+    const { error: dbErr, data: insertData } = await db.from("drops").insert({
+      room_id:      roomId,
+      file_name:    file.name,
+      file_size:    file.size,
+      storage_path: b2Key,
+      expires_at:   expiresAt,
+      content_type: "file",
+      provider:     "b2",
+    }).select("id").single();
 
     if (dbErr) {
       await db.storage.from("ghost-drop").remove([path]);
@@ -763,7 +778,19 @@ async function uploadFiles(files) {
       continue;
     }
 
-    if (insertData?.id) myRecentDrops.set(insertData.id, TTL_SECONDS);
+    if (insertData?.id) {
+      myRecentDrops.set(insertData.id, TTL_SECONDS);
+      // Añadir al DOM inmediatamente sin esperar Realtime
+      prependDrop({
+        id: insertData.id,
+        room_id: roomId,
+        file_name: file.name,
+        file_size: file.size,
+        storage_path: path,
+        expires_at: expiresAt,
+        content_type: "file",
+      });
+    }
     incrementTotalUploads();
 
     // ── 100% y cierre suave ──────────────────────────────
@@ -814,28 +841,19 @@ async function sendText() {
 
 async function downloadAndDestroy(storagePath, dropId, fileName) {
   showToast("Preparando descarga…", "info");
-
-  // Generar URL firmada — el browser descarga directo desde Supabase
-  // sin pasar el archivo por el cliente (mucho más rápido)
-  const { data, error } = await db.storage
-    .from("ghost-drop")
-    .createSignedUrl(storagePath, 60); // válida 60 segundos
-
-  if (error) {
-    showToast(`Error: ${error.message}`, "error");
-    return;
+  try {
+    const url = await getB2DownloadUrl(storagePath, fileName);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = fileName;
+    a.target = "_blank";
+    a.click();
+    haptic([10, 50, 10]);
+    recordDownload(fileName, roomId);
+    showToast("Descarga iniciada", "success");
+  } catch (err) {
+    showToast(`Error: ${err.message}`, "error");
   }
-
-  // Abrir la URL firmada directamente — descarga instantánea
-  const a = document.createElement("a");
-  a.href = data.signedUrl;
-  a.download = fileName;
-  a.target = "_blank";
-  a.click();
-
-  haptic([10, 50, 10]);
-  recordDownload(fileName, roomId);
-  showToast("Descarga iniciada", "success");
 }
 
 // ─── Realtime drops ────────────────────────────────────────

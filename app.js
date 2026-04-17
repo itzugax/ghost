@@ -243,7 +243,215 @@ function makeRipple(selector) {
   });
 }
 
-// ─── Skeleton loader ──────────────────────────────────────
+// ─── Digit Input ───────────────────────────────────────────
+
+function initDigitInput() {
+  const boxes = Array.from(document.querySelectorAll(".digit-box"));
+  const hiddenInput = document.getElementById("room-input");
+
+  function syncHidden() {
+    hiddenInput.value = boxes.map(b => b.value).join("");
+  }
+
+  boxes.forEach((box, i) => {
+    box.addEventListener("keydown", (e) => {
+      if (e.key === "Backspace") {
+        e.preventDefault();
+        if (box.value) {
+          box.value = "";
+          box.classList.remove("digit-filled");
+          syncHidden();
+        } else if (i > 0) {
+          boxes[i - 1].focus();
+          boxes[i - 1].value = "";
+          boxes[i - 1].classList.remove("digit-filled");
+          syncHidden();
+        }
+      } else if (e.key === "ArrowLeft" && i > 0) {
+        boxes[i - 1].focus();
+      } else if (e.key === "ArrowRight" && i < 5) {
+        boxes[i + 1].focus();
+      } else if (e.key === "Enter") {
+        joinBtn.click();
+      }
+    });
+
+    box.addEventListener("input", (e) => {
+      // Filtrar solo dígitos
+      const val = e.target.value.replace(/[^0-9]/g, "").slice(-1);
+      box.value = val;
+      if (val) {
+        box.classList.add("digit-filled");
+        // Animación pop
+        box.classList.remove("digit-pop");
+        void box.offsetWidth;
+        box.classList.add("digit-pop");
+        // Avanzar al siguiente
+        if (i < 5) boxes[i + 1].focus();
+      } else {
+        box.classList.remove("digit-filled");
+      }
+      syncHidden();
+    });
+
+    // Pegar código completo
+    box.addEventListener("paste", (e) => {
+      e.preventDefault();
+      const pasted = (e.clipboardData.getData("text") || "").replace(/[^0-9]/g, "").slice(0, 6);
+      pasted.split("").forEach((ch, idx) => {
+        if (boxes[idx]) {
+          boxes[idx].value = ch;
+          boxes[idx].classList.add("digit-filled");
+        }
+      });
+      syncHidden();
+      const nextEmpty = boxes.find(b => !b.value);
+      (nextEmpty || boxes[5]).focus();
+    });
+
+    // Seleccionar todo al hacer focus
+    box.addEventListener("focus", () => box.select());
+  });
+}
+
+// ─── Slot Machine (odómetro / caja fuerte) ────────────────
+
+function runSlotMachine(callback) {
+  const btn = document.getElementById("new-room-btn");
+  const boxes = Array.from(document.querySelectorAll(".digit-box"));
+  const finalCode = generateRoomCode();
+  const digits = finalCode.split("").map(Number);
+
+  btn.disabled = true;
+
+  const TOTAL_DURATION = 1400; // ms total de la animación
+  const STAGGER        = 160;  // ms entre que cada dígito se detiene (de izq a der)
+  const FPS            = 60;
+  const FRAME_MS       = 1000 / FPS;
+
+  // Para cada dígito: animar el valor que se muestra girando
+  digits.forEach((finalDigit, col) => {
+    const box = boxes[col];
+    if (!box) return;
+
+    // Tiempo en que este dígito se detiene
+    const stopAt = TOTAL_DURATION - (digits.length - 1 - col) * STAGGER;
+
+    let current = Math.floor(Math.random() * 10); // valor inicial aleatorio
+    let startTime = null;
+    let stopped = false;
+
+    box.classList.add("digit-filled", "digit-spinning");
+
+    function frame(ts) {
+      if (!startTime) startTime = ts;
+      const elapsed = ts - startTime;
+
+      if (elapsed >= stopAt && !stopped) {
+        // Parar en el dígito correcto
+        stopped = true;
+        box.value = String(finalDigit);
+        box.classList.remove("digit-spinning");
+        // Pop de aterrizaje
+        box.classList.remove("digit-pop");
+        void box.offsetWidth;
+        box.classList.add("digit-pop");
+        haptic([6]);
+        return;
+      }
+
+      if (!stopped) {
+        // Velocidad: rápido al inicio, se frena al acercarse al stop
+        const progress = elapsed / stopAt;
+        // Intervalo entre cambios: empieza en 60ms, sube a 200ms al final
+        const interval = FRAME_MS + progress * progress * 180;
+
+        if (!box._lastChange || ts - box._lastChange >= interval) {
+          current = (current + 1) % 10;
+          box.value = String(current);
+          box._lastChange = ts;
+        }
+
+        requestAnimationFrame(frame);
+      }
+    }
+
+    requestAnimationFrame(frame);
+  });
+
+  // Al terminar todo: restaurar botón y entrar a la sala
+  setTimeout(() => {
+    btn.disabled = false;
+    document.getElementById("room-input").value = finalCode;
+    // Limpiar propiedades temporales
+    boxes.forEach(b => delete b._lastChange);
+    callback(finalCode);
+  }, TOTAL_DURATION + 100);
+}
+
+// ─── Sonido de sintonización ───────────────────────────────
+// ─── Sonido de sintonización ───────────────────────────────
+
+// ─── TTL Picker ────────────────────────────────────────────
+
+let _pendingFiles = null;
+
+function showTTLPicker(files) {
+  if (!files || !files.length) return;
+  _pendingFiles = files;
+  const picker = document.getElementById("ttl-picker");
+  picker.classList.remove("hidden");
+  haptic([8]);
+  setTimeout(() => picker.querySelector(".ttl-picker-btn")?.focus(), 50);
+}
+
+function hideTTLPicker() {
+  const picker = document.getElementById("ttl-picker");
+  const sheet = picker.querySelector(".ttl-picker-sheet");
+  const backdrop = picker.querySelector(".ttl-picker-backdrop");
+  sheet.style.animation = "sheet-out 0.22s cubic-bezier(0.4,0,0.2,1) forwards";
+  backdrop.style.animation = "picker-fade-out 0.22s ease forwards";
+  setTimeout(() => {
+    picker.classList.add("hidden");
+    sheet.style.animation = "";
+    backdrop.style.animation = "";
+  }, 220);
+}
+
+function initTTLPicker() {
+  const picker = document.getElementById("ttl-picker");
+
+  picker.querySelectorAll(".ttl-picker-btn").forEach(btn => {
+    btn.addEventListener("click", () => {
+      const secs = parseInt(btn.dataset.secs);
+      TTL_SECONDS = secs;
+      // Sincronizar con los TTL buttons del card
+      document.querySelectorAll(".ttl-btn").forEach(b => {
+        b.classList.toggle("active", parseInt(b.dataset.secs) === secs);
+      });
+      haptic([10, 20]);
+      hideTTLPicker();
+      setTimeout(() => {
+        if (_pendingFiles) { uploadFiles(_pendingFiles); _pendingFiles = null; }
+      }, 180);
+    });
+  });
+
+  const cancel = () => {
+    haptic([8]);
+    hideTTLPicker();
+    _pendingFiles = null;
+    fileInput.value = "";
+  };
+
+  picker.querySelector(".ttl-picker-cancel").addEventListener("click", cancel);
+  picker.querySelector(".ttl-picker-backdrop").addEventListener("click", cancel);
+  document.addEventListener("keydown", e => {
+    if (e.key === "Escape" && !picker.classList.contains("hidden")) cancel();
+  });
+}
+
+// ─── Skeleton loader ───────────────────────────────────────
 function showSkeleton() {
   filesList.innerHTML = Array(3).fill(`
     <li class="skeleton-item">
@@ -346,11 +554,12 @@ function updateTypingUI(state, myUserId) {
 function animateExpire(fileId) {
   const li = document.querySelector(`li[data-id="${fileId}"]`);
   if (!li) return;
-  li.classList.add("drop-expiring");
-  li.addEventListener("animationend", () => {
+  haptic([15, 30, 15]); // vibración al esfumarse
+  li.classList.add("exit-animation");
+  setTimeout(() => {
     li.remove();
     updateDropCount();
-  }, { once: true });
+  }, 400);
 }
 
 
@@ -468,8 +677,18 @@ function leaveRoom() {
 
   hide(roomBadge, dropSection, textSection, listSection);
   show(roomSection);
-  filesList.innerHTML = `<li class="empty">No hay nada en esta sala aún.</li>`;
+  filesList.innerHTML = `
+    <li class="empty-state">
+      <span class="empty-ghost">👻</span>
+      <span class="empty-title">La sala está despejada.</span>
+      <span class="empty-sub">El radar no detecta archivos.</span>
+    </li>`;
   roomInput.value = "";
+  // Limpiar digit boxes
+  document.querySelectorAll(".digit-box").forEach(b => {
+    b.value = "";
+    b.classList.remove("digit-filled");
+  });
   dropCount.textContent = "";
   setStatus("Sin sala activa", "info");
 }
@@ -518,7 +737,12 @@ function renderDrops(items) {
   updateDropCount(active.length);
 
   if (!active.length) {
-    filesList.innerHTML = `<li class="empty">No hay nada en esta sala aún.</li>`;
+    filesList.innerHTML = `
+      <li class="empty-state">
+        <span class="empty-ghost">👻</span>
+        <span class="empty-title">La sala está despejada.</span>
+        <span class="empty-sub">El radar no detecta archivos.</span>
+      </li>`;
     return;
   }
 
@@ -590,6 +814,16 @@ function attachDropEvents(container) {
   container.querySelectorAll(".file-dl-btn").forEach(btn => {
     btn.addEventListener("click", () => {
       haptic();
+      // Feedback visual inmediato — el botón se vuelve verde con ✓
+      const origHTML = btn.innerHTML;
+      btn.innerHTML = "✓";
+      btn.classList.add("dl-success");
+      btn.disabled = true;
+      setTimeout(() => {
+        btn.innerHTML = origHTML;
+        btn.classList.remove("dl-success");
+        btn.disabled = false;
+      }, 1500);
       downloadAndDestroy(btn.dataset.path, btn.dataset.id, btn.dataset.name);
     });
   });
@@ -676,6 +910,7 @@ function startFileTimer(fileId, secs, totalSecs) {
     }
 
     if (remaining <= 0) {
+      // Muerte instantánea — dispara animación sin mostrar 00:00
       clearInterval(fileTimers[fileId]);
       delete fileTimers[fileId];
       animateExpire(fileId);
@@ -686,13 +921,18 @@ function startFileTimer(fileId, secs, totalSecs) {
 }
 
 function updateDropCount(n) {
-  const count = n ?? filesList.querySelectorAll("li:not(.empty)").length;
+  const count = n ?? filesList.querySelectorAll("li:not(.empty):not(.empty-state)").length;
   const el = dropCount;
   const prev = el.textContent;
   const next = count ? `· ${count}` : "";
   el.textContent = next;
   if (count === 0) {
-    filesList.innerHTML = `<li class="empty">No hay nada en esta sala aún.</li>`;
+    filesList.innerHTML = `
+      <li class="empty-state">
+        <span class="empty-ghost">👻</span>
+        <span class="empty-title">La sala está despejada.</span>
+        <span class="empty-sub">El radar no detecta archivos.</span>
+      </li>`;
   }
   // Pop animation cuando el número cambia
   if (prev !== next && count > 0) {
@@ -862,27 +1102,29 @@ async function sendText() {
 async function downloadAndDestroy(storagePath, dropId, fileName) {
   showToast("Preparando descarga…", "info");
 
-  // Generar URL firmada — el browser descarga directo desde Supabase
-  // sin pasar el archivo por el cliente (mucho más rápido)
-  const { data, error } = await db.storage
-    .from("ghost-drop")
-    .createSignedUrl(storagePath, 60); // válida 60 segundos
+  try {
+    const { data, error } = await db.storage
+      .from("ghost-drop")
+      .createSignedUrl(storagePath, 120);
 
-  if (error) {
-    showToast(`Error: ${error.message}`, "error");
-    return;
+    if (error || !data?.signedUrl) {
+      showToast(`Error: ${error?.message ?? "Sin URL"}`, "error");
+      return;
+    }
+
+    // Añadir ?download= para forzar Content-Disposition: attachment
+    const dlUrl = data.signedUrl + (data.signedUrl.includes("?") ? "&" : "?")
+      + "download=" + encodeURIComponent(fileName);
+
+    window.open(dlUrl, "_blank");
+
+    haptic([10, 50, 10]);
+    recordDownload(fileName, roomId);
+    showToast("Descarga iniciada ✓", "success");
+
+  } catch (e) {
+    showToast(`Error: ${e.message}`, "error");
   }
-
-  // Abrir la URL firmada directamente — descarga instantánea
-  const a = document.createElement("a");
-  a.href = data.signedUrl;
-  a.download = fileName;
-  a.target = "_blank";
-  a.click();
-
-  haptic([10, 50, 10]);
-  recordDownload(fileName, roomId);
-  showToast("Descarga iniciada", "success");
 }
 
 // ─── Realtime drops ────────────────────────────────────────
@@ -923,6 +1165,8 @@ function subscribeToRoom() {
 }
 
 function prependDrop(f, exactTTL = null) {
+  // Limpiar empty state si existe
+  filesList.querySelector(".empty-state")?.remove();
   filesList.querySelector(".empty")?.remove();
   const li = buildDropEl(f);
   li.classList.add("drop-new");
@@ -980,7 +1224,6 @@ function updateMembersUI() {
 function notifyNewDrop(name, type) {
   const label = type === "text" ? "texto" : "archivo";
   showToast(`Nuevo ${label}: ${name.slice(0, 28)}`, "info");
-  playPing();
 
   if (Notification.permission === "granted" && document.hidden) {
     new Notification("Ghost Drop", {
@@ -988,22 +1231,6 @@ function notifyNewDrop(name, type) {
       icon: "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>👻</text></svg>",
     });
   }
-}
-
-function playPing() {
-  try {
-    const ctx  = new (window.AudioContext || window.webkitAudioContext)();
-    const osc  = ctx.createOscillator();
-    const gain = ctx.createGain();
-    osc.connect(gain);
-    gain.connect(ctx.destination);
-    osc.frequency.value = 880;
-    osc.type = "sine";
-    gain.gain.setValueAtTime(0.12, ctx.currentTime);
-    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.3);
-    osc.start(ctx.currentTime);
-    osc.stop(ctx.currentTime + 0.3);
-  } catch {}
 }
 
 async function requestNotifications() {
@@ -1064,10 +1291,13 @@ dropzone.addEventListener("dragover", e => { e.preventDefault(); dropzone.classL
 dropzone.addEventListener("dragleave", () => dropzone.classList.remove("drag-over"));
 dropzone.addEventListener("drop", e => {
   e.preventDefault(); dropzone.classList.remove("drag-over");
-  uploadFiles(e.dataTransfer.files);
+  if (roomId) showTTLPicker(e.dataTransfer.files);
+  else showToast("Únete a una sala primero", "error");
 });
 dropzone.addEventListener("click", () => fileInput.click());
-fileInput.addEventListener("change", () => { uploadFiles(fileInput.files); fileInput.value = ""; });
+fileInput.addEventListener("change", () => {
+  if (fileInput.files.length) showTTLPicker(fileInput.files);
+});
 
 joinBtn.addEventListener("click", () => {
   const code = sanitizeCode(roomInput.value);
@@ -1078,7 +1308,7 @@ roomInput.addEventListener("keydown", e => { if (e.key === "Enter") joinBtn.clic
 roomInput.addEventListener("input", () => {
   roomInput.value = roomInput.value.replace(/[^0-9]/g, "").slice(0, 6);
 });
-newBtn.addEventListener("click", () => joinRoom(generateRoomCode()));
+newBtn.addEventListener("click", () => runSlotMachine((code) => joinRoom(code)));
 
 copyBtn.addEventListener("click", () => {
   const url = `${location.origin}${location.pathname}?sala=${copyBtn.dataset.code}`;
@@ -1133,6 +1363,12 @@ async function init() {
 
   document.getElementById("compact-btn")?.addEventListener("click", toggleCompact);
   makeRipple(".btn-primary, .btn-secondary, .badge-btn, .dl-btn");
+
+  // Digit input
+  initDigitInput();
+
+  // TTL Picker
+  initTTLPicker();
 
   // Calibrar ANTES de cualquier operación para que serverNow() sea correcto
   await calibrateServerTime().catch(() => {});

@@ -30,6 +30,14 @@
 </head>
 <body>
 
+  <!-- Mesh Gradient Background -->
+  <div class="bg-glow" aria-hidden="true">
+    <div class="bg-orb bg-orb-1"></div>
+    <div class="bg-orb bg-orb-2"></div>
+    <div class="bg-orb bg-orb-3"></div>
+    <div class="bg-orb bg-orb-4"></div>
+  </div>
+
   <header>
     <div class="logo">👻 Ghost<span>Drop</span></div>
     <div class="tagline">Comparte archivos y texto. Sin rastro.</div>
@@ -66,12 +74,23 @@
   <div class="card" id="room-section">
     <div class="card-title">Entrar a una sala</div>
     <p class="room-desc">Usa un código de 6 dígitos para compartir con quien quieras, desde cualquier red.</p>
-    <div class="room-row">
-      <input id="room-input" type="number" inputmode="numeric" placeholder="123456"
-             maxlength="6" min="100000" max="999999" autocomplete="off" />
+
+    <!-- Input de dígitos individuales -->
+    <div class="digit-input-row">
+      <div class="digit-boxes" id="digit-boxes">
+        <input class="digit-box" type="text" inputmode="numeric" maxlength="1" pattern="[0-9]" autocomplete="off" />
+        <input class="digit-box" type="text" inputmode="numeric" maxlength="1" pattern="[0-9]" autocomplete="off" />
+        <input class="digit-box" type="text" inputmode="numeric" maxlength="1" pattern="[0-9]" autocomplete="off" />
+        <input class="digit-box" type="text" inputmode="numeric" maxlength="1" pattern="[0-9]" autocomplete="off" />
+        <input class="digit-box" type="text" inputmode="numeric" maxlength="1" pattern="[0-9]" autocomplete="off" />
+        <input class="digit-box" type="text" inputmode="numeric" maxlength="1" pattern="[0-9]" autocomplete="off" />
+      </div>
       <button id="join-btn" class="btn-primary">Entrar</button>
     </div>
-    <button id="new-room-btn" class="btn-secondary">✦ Crear sala nueva</button>
+    <!-- Input oculto para compatibilidad con el resto del JS -->
+    <input id="room-input" type="hidden" />
+
+    <button id="new-room-btn" class="btn-secondary">🎲 Sala aleatoria</button>
 
     <!-- Salas recientes -->
     <div id="recent-rooms" style="display:none">
@@ -93,16 +112,6 @@
       <div id="progress-bar"></div>
     </div>
     <div id="progress-label" class="progress-label"></div>
-
-    <!-- TTL selector -->
-    <div class="ttl-row">
-      <span class="ttl-label">Expira en</span>
-      <div class="ttl-options">
-        <button class="ttl-btn" data-secs="60">1 min</button>
-        <button class="ttl-btn active" data-secs="300">5 min</button>
-        <button class="ttl-btn" data-secs="900">15 min</button>
-      </div>
-    </div>
   </div>
 
   <!-- Enviar texto -->
@@ -138,7 +147,11 @@
       </button>
     </div>
     <ul id="files-list">
-      <li class="empty">No hay nada en esta sala aún.</li>
+      <li class="empty-state">
+        <span class="empty-ghost">👻</span>
+        <span class="empty-title">La sala está despejada.</span>
+        <span class="empty-sub">El radar no detecta archivos.</span>
+      </li>
     </ul>
   </div>
 
@@ -154,6 +167,30 @@
 
   <!-- Notificación toast -->
   <div id="toast" class="toast hidden"></div>
+
+  <!-- TTL Picker flotante (aparece al soltar archivo) -->
+  <div id="ttl-picker" class="ttl-picker hidden" role="dialog" aria-modal="true" aria-label="Seleccionar tiempo">
+    <div class="ttl-picker-backdrop"></div>
+    <div class="ttl-picker-sheet">
+      <div class="ttl-picker-title">¿Cuánto tiempo le damos?</div>
+      <div class="ttl-picker-sub">El archivo desaparecerá para todos al expirar</div>
+      <div class="ttl-picker-options">
+        <button class="ttl-picker-btn" data-secs="60">
+          <span class="ttl-picker-time">1</span>
+          <span class="ttl-picker-unit">min</span>
+        </button>
+        <button class="ttl-picker-btn" data-secs="300">
+          <span class="ttl-picker-time">5</span>
+          <span class="ttl-picker-unit">min</span>
+        </button>
+        <button class="ttl-picker-btn" data-secs="900">
+          <span class="ttl-picker-time">15</span>
+          <span class="ttl-picker-unit">min</span>
+        </button>
+      </div>
+      <button class="ttl-picker-cancel">Cancelar</button>
+    </div>
+  </div>
 
   <!-- Modal imagen -->
   <div id="img-modal" class="modal-backdrop hidden" onclick="if(event.target===this)this.classList.add('hidden')">
@@ -171,6 +208,9 @@
     <span id="total-uploads" class="footer-stat"></span>
     <span class="footer-copy">© 2026 Ugax. Todos los derechos reservados.</span>
   </footer>
+
+  <!-- Badge de versión -->
+  <div class="version-badge" title="Versión de la app">v3.2.0</div>
 
   <script src="supabase-config.js"></script>
   <script src="app.js"></script>

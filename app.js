@@ -2,6 +2,28 @@
 // GHOST-DROP — v3
 // ============================================================
 
+// Version check — si cambia, forzar recarga
+const APP_VERSION = "3.4.1";
+const storedVersion = localStorage.getItem("ghostdrop-version");
+if (storedVersion !== APP_VERSION) {
+  localStorage.setItem("ghostdrop-version", APP_VERSION);
+  // Si ya había una versión previa, mostrar mensaje y recargar
+  if (storedVersion !== null) {
+    console.log(`Nueva versión detectada: ${storedVersion} → ${APP_VERSION}, recargando...`);
+    // Mostrar toast informativo
+    setTimeout(() => {
+      const toastEl = document.getElementById("toast");
+      if (toastEl) {
+        toastEl.textContent = "🔄 Nueva versión disponible, actualizando...";
+        toastEl.className = "toast toast-info";
+        toastEl.classList.remove("hidden");
+      }
+    }, 100);
+    // Recargar después de mostrar el mensaje
+    setTimeout(() => location.reload(), 1500);
+  }
+}
+
 let TTL_SECONDS = 300;
 let BURN_AFTER_READING = false;
 let roomId      = null;

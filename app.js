@@ -10,17 +10,26 @@ if (storedVersion !== APP_VERSION) {
   // Si ya había una versión previa, mostrar mensaje y recargar
   if (storedVersion !== null) {
     console.log(`Nueva versión detectada: ${storedVersion} → ${APP_VERSION}, recargando...`);
-    // Mostrar toast informativo
-    setTimeout(() => {
+    
+    // Esperar a que el DOM esté listo para mostrar el toast
+    const showUpdateToast = () => {
       const toastEl = document.getElementById("toast");
       if (toastEl) {
         toastEl.textContent = "🔄 Nueva versión disponible, actualizando...";
         toastEl.className = "toast toast-info";
         toastEl.classList.remove("hidden");
       }
-    }, 100);
-    // Recargar después de mostrar el mensaje
-    setTimeout(() => location.reload(), 1500);
+    };
+    
+    if (document.readyState === "loading") {
+      document.addEventListener("DOMContentLoaded", () => {
+        setTimeout(showUpdateToast, 100);
+        setTimeout(() => location.reload(), 1500);
+      });
+    } else {
+      setTimeout(showUpdateToast, 100);
+      setTimeout(() => location.reload(), 1500);
+    }
   }
 }
 

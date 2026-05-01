@@ -3,7 +3,7 @@
 // ============================================================
 
 // Version check — si cambia, forzar recarga
-const APP_VERSION = "3.4.1";
+const APP_VERSION = "3.4.2";
 const storedVersion = localStorage.getItem("ghostdrop-version");
 if (storedVersion !== APP_VERSION) {
   localStorage.setItem("ghostdrop-version", APP_VERSION);

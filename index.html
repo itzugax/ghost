@@ -35,15 +35,6 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="default" />
   <meta name="apple-mobile-web-app-title" content="GhostDrop" />
 
-  <!-- Google Analytics -->
-  <script async src="https://www.googletagmanager.com/gtag/js?id=G-S7MEDQ6T3J"></script>
-  <script>
-    window.dataLayer = window.dataLayer || [];
-    function gtag(){dataLayer.push(arguments);}
-    gtag('js', new Date());
-    gtag('config', 'G-S7MEDQ6T3J');
-  </script>
-
   <!-- QR Code library (local) -->
   <script src="qrcode.min.js"></script>
   <!-- JSZip for bulk download -->
@@ -57,31 +48,32 @@
 
   <header>
     <div class="logo">👻 Ghost<span style="color: #3b82f6;">Drop</span></div>
-    <div class="tagline">Comparte archivos en 5 segundos. Sin registro. Sin apps. Cifrado E2E.</div>
+    <div class="tagline" data-i18n="tagline">Comparte archivos en 5 segundos. Sin registro. Sin apps. Cifrado E2E.</div>
+    <button id="lang-btn" class="lang-btn" title="Change language">EN</button>
   </header>
 
   <!-- Estado -->
   <div class="card" id="status-card">
-    <div id="status" class="status info">Sin sala activa</div>
+    <div id="status" class="status info" data-i18n="statusNoRoom">Sin sala activa</div>
     <div id="room-badge" class="room-badge hidden">
       <span id="room-code-display"></span>
       <span id="members-count" class="members-count"></span>
       <div class="badge-actions">
         <button id="copy-room-btn" class="badge-btn" title="Copiar código">
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
-          Copiar
+          <span data-i18n="copyBtn">Copiar</span>
         </button>
         <button id="invite-btn" class="badge-btn" title="Invitar">
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg>
-          Invitar
+          <span data-i18n="inviteBtn">Invitar</span>
         </button>
         <button id="qr-btn" class="badge-btn" title="Ver QR">
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="3" height="3"/></svg>
-          QR
+          <span data-i18n="qrBtn">QR</span>
         </button>
         <button id="leave-btn" class="badge-btn danger" title="Salir">
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
-          Salir
+          <span data-i18n="leaveBtn">Salir</span>
         </button>
       </div>
     </div>
@@ -89,8 +81,8 @@
 
   <!-- Unirse / crear sala -->
   <div class="card" id="room-section">
-    <div class="card-title">Entrar a una sala</div>
-    <p class="room-desc">Usa un código de 6 dígitos para compartir con quien quieras, desde cualquier red.</p>
+    <div class="card-title" data-i18n="roomTitle">Entrar a una sala</div>
+    <p class="room-desc" data-i18n="roomDesc">Usa un código de 6 dígitos para compartir con quien quieras, desde cualquier red.</p>
 
     <!-- Input de dígitos individuales -->
     <div class="digit-input-row">
@@ -102,27 +94,27 @@
         <input class="digit-box" type="text" inputmode="numeric" maxlength="1" pattern="[0-9]" autocomplete="off" />
         <input class="digit-box" type="text" inputmode="numeric" maxlength="1" pattern="[0-9]" autocomplete="off" />
       </div>
-      <button id="join-btn" class="btn-primary">Entrar</button>
+      <button id="join-btn" class="btn-primary" data-i18n="joinBtn">Entrar</button>
     </div>
     <!-- Input oculto para compatibilidad con el resto del JS -->
     <input id="room-input" type="hidden" />
 
-    <button id="new-room-btn" class="btn-secondary">🎲 Sala aleatoria</button>
+    <button id="new-room-btn" class="btn-secondary" data-i18n="newRoomBtn">🎲 Sala aleatoria</button>
 
     <!-- Salas recientes -->
     <div id="recent-rooms" style="display:none">
-      <div class="section-label">Recientes</div>
+      <div class="section-label" data-i18n="recentLabel">Recientes</div>
       <div id="recent-list" class="recent-list"></div>
     </div>
   </div>
 
   <!-- Subir archivo -->
   <div class="card hidden" id="drop-section">
-    <div class="card-title">Compartir archivo</div>
+    <div class="card-title" data-i18n="dropTitle">Compartir archivo</div>
     <div id="dropzone">
       <span class="drop-icon">📂</span>
-      <div class="drop-label">Arrastra archivos aquí</div>
-      <div class="drop-sub">o toca para seleccionar · máx. 50 MB por archivo</div>
+      <div class="drop-label" data-i18n="dropLabel">Arrastra archivos aquí</div>
+      <div class="drop-sub" data-i18n="dropSub" data-i18n-html="true">o toca para seleccionar · <strong>Máx: 500MB</strong></div>
     </div>
     <input type="file" id="file-input" multiple />
     <div id="progress-wrap">
@@ -133,35 +125,35 @@
 
   <!-- Enviar texto -->
   <div class="card hidden" id="text-section">
-    <div class="card-title">Compartir texto / enlace</div>
-    <textarea id="text-input" placeholder="Pega un texto, enlace o nota…" rows="3"></textarea>
+    <div class="card-title" data-i18n="textTitle">Compartir texto / enlace</div>
+    <textarea id="text-input" data-i18n="textPlaceholder" placeholder="Pega un texto, enlace o nota…" rows="3"></textarea>
     <div id="typing-indicator" class="typing-indicator">
       <div class="typing-dot"></div>
       <div class="typing-dot"></div>
       <div class="typing-dot"></div>
-      <span>alguien está escribiendo…</span>
+      <span data-i18n="typingIndicator">alguien está escribiendo…</span>
     </div>
     <div class="text-actions">
       <div class="ttl-options">
-        <button class="ttl-btn" data-secs="60">1 min</button>
-        <button class="ttl-btn active" data-secs="300">5 min</button>
-        <button class="ttl-btn" data-secs="900">15 min</button>
+        <button class="ttl-btn" data-secs="60" data-i18n="ttl1min">1 min</button>
+        <button class="ttl-btn active" data-secs="300" data-i18n="ttl5min">5 min</button>
+        <button class="ttl-btn" data-secs="900" data-i18n="ttl15min">15 min</button>
       </div>
-      <button id="send-text-btn" class="btn-primary">Enviar</button>
+      <button id="send-text-btn" class="btn-primary" data-i18n="sendBtn">Enviar</button>
     </div>
   </div>
 
   <!-- Lista de drops -->
   <div class="card hidden" id="list-section">
     <div class="list-header">
-      <div class="card-title" style="margin:0">En la sala <span id="drop-count" class="drop-count"></span></div>
+      <div class="card-title" style="margin:0"><span data-i18n="listTitle">En la sala</span> <span id="drop-count" class="drop-count"></span></div>
       <button id="download-all-btn" class="badge-btn hidden" title="Descargar todo como ZIP">
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-        Descargar todo
+        <span data-i18n="downloadAllBtn">Descargar todo</span>
       </button>
       <button id="notify-btn" class="badge-btn" title="Activar notificaciones">
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
-        Notificar
+        <span data-i18n="notifyBtn">Notificar</span>
       </button>
       <button id="compact-btn" class="badge-btn" title="Modo compacto">
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
@@ -169,9 +161,9 @@
     </div>
     <ul id="files-list">
       <li class="empty-state">
-        <span class="empty-ghost">👻</span>
-        <span class="empty-title">La sala está despejada.</span>
-        <span class="empty-sub">El radar no detecta archivos.</span>
+        <span class="empty-ghost" data-i18n="emptyGhost">👻</span>
+        <span class="empty-title" data-i18n="emptyTitle">La sala está despejada.</span>
+        <span class="empty-sub" data-i18n="emptySub">El radar no detecta archivos.</span>
       </li>
     </ul>
   </div>
@@ -179,10 +171,10 @@
   <!-- Modal QR -->
   <div id="qr-modal" class="modal-backdrop hidden">
     <div class="modal">
-      <div class="modal-title">Escanea para unirte</div>
+      <div class="modal-title" data-i18n="qrTitle">Escanea para unirte</div>
       <div id="qr-canvas"></div>
       <div class="modal-code" id="modal-code"></div>
-      <button id="qr-close" class="btn-primary" style="width:100%">Cerrar</button>
+      <button id="qr-close" class="btn-primary" style="width:100%" data-i18n="qrClose">Cerrar</button>
     </div>
   </div>
 
@@ -197,23 +189,23 @@
         <button id="onboarding-close" class="onboarding-close">✕</button>
       </div>
       <div class="onboarding-text">
-        <div class="onboarding-title">¡Bienvenido a Ghost Drop!</div>
-        <div class="onboarding-desc">Compartir archivos nunca fue tan fácil:</div>
+        <div class="onboarding-title" data-i18n="onboardingTitle">¡Bienvenido a Ghost Drop!</div>
+        <div class="onboarding-desc" data-i18n="onboardingDesc">Compartir archivos nunca fue tan fácil:</div>
         <div class="onboarding-steps">
           <div class="onboarding-step">
             <span class="step-number">1</span>
-            <span class="step-text">Crea una sala con 6 dígitos</span>
+            <span class="step-text" data-i18n="onboardingStep1">Crea una sala con 6 dígitos</span>
           </div>
           <div class="onboarding-step">
             <span class="step-number">2</span>
-            <span class="step-text">Arrastra tus archivos</span>
+            <span class="step-text" data-i18n="onboardingStep2">Arrastra tus archivos</span>
           </div>
           <div class="onboarding-step">
             <span class="step-number">3</span>
-            <span class="step-text">Comparte el código</span>
+            <span class="step-text" data-i18n="onboardingStep3">Comparte el código</span>
           </div>
         </div>
-        <button id="onboarding-cta" class="onboarding-cta">Entendido, empecemos 🚀</button>
+        <button id="onboarding-cta" class="onboarding-cta" data-i18n="onboardingCta">Entendido, empecemos 🚀</button>
       </div>
     </div>
     <div class="onboarding-backdrop"></div>
@@ -223,8 +215,8 @@
   <div id="ttl-picker" class="ttl-picker hidden" role="dialog" aria-modal="true" aria-label="Seleccionar tiempo">
     <div class="ttl-picker-backdrop"></div>
     <div class="ttl-picker-sheet">
-      <div class="ttl-picker-title">¿Cuánto tiempo le damos?</div>
-      <div class="ttl-picker-sub">El archivo desaparecerá para todos al expirar</div>
+      <div class="ttl-picker-title" data-i18n="ttlPickerTitle">¿Cuánto tiempo le damos?</div>
+      <div class="ttl-picker-sub" data-i18n="ttlPickerSub">El archivo desaparecerá para todos al expirar</div>
       <div class="ttl-picker-options">
         <button class="ttl-picker-btn" data-secs="60">
           <span class="ttl-picker-time">1</span>
@@ -241,9 +233,9 @@
       </div>
       <label class="ttl-picker-burn">
         <input type="checkbox" id="burn-after-reading" />
-        <span>🔥 Borrar después de 1 descarga</span>
+        <span data-i18n="ttlPickerBurn">🔥 Borrar después de 1 descarga</span>
       </label>
-      <button class="ttl-picker-cancel">Cancelar</button>
+      <button class="ttl-picker-cancel" data-i18n="ttlPickerCancel">Cancelar</button>
     </div>
   </div>
 
@@ -259,33 +251,29 @@
   </div>
 
   <footer>
-    <span>Ghost Drop · Cifrado E2E · Cero fricción</span>
+    <span>Ghost Drop · <span data-i18n="tagline">Cifrado E2E · Cero fricción</span></span>
     <span id="total-uploads" class="footer-stat"></span>
     <div class="footer-links">
-      <a href="/privacy.html">Privacidad</a>
+      <a href="/privacy.html" data-i18n="footerPrivacy">Privacidad</a>
       <span>·</span>
-      <a href="/terms.html">Términos</a>
+      <a href="/terms.html" data-i18n="footerTerms">Términos</a>
       <span>·</span>
       <a href="https://github.com/itzugax/ghost" target="_blank" rel="noopener" class="github-link">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
           <path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/>
         </svg>
-        Open Source
+        <span data-i18n="footerOpenSource">Open Source</span>
       </a>
     </div>
-    <span class="footer-copy">© 2026 Ugax. Todos los derechos reservados.</span>
-    <!-- Opcional: descomentar si quieres agregar donaciones
-    <a href="https://ko-fi.com/tuusuario" target="_blank" rel="noopener" class="footer-support">
-      ☕ Si te salvó, invítame un café
-    </a>
-    -->
+    <span class="footer-copy" data-i18n="footerCopyright">© 2026 Ugax. Todos los derechos reservados.</span>
   </footer>
 
   <!-- Badge de versión -->
-  <div class="version-badge" title="Versión de la app">v3.4.2</div>
+  <div class="version-badge" title="Versión de la app">v3.5.1</div>
 
   <script src="supabase-config.js"></script>
   <script src="crypto.js"></script>
-  <script src="app.js"></script>
+  <script src="i18n.js"></script>
+  <script type="module" src="app.js"></script>
 </body>
 </html>

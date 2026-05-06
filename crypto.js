@@ -176,3 +176,75 @@ async function decryptText(encryptedBase64, roomCode) {
 function isCryptoSupported() {
   return !!(window.crypto && window.crypto.subtle);
 }
+
+/**
+ * Genera una clave de recuperación de 12 palabras (BIP39-like simplificado)
+ * @param {string} roomCode - Código de sala
+ * @returns {Promise<string>} - 12 palabras separadas por espacios
+ */
+async function generateRecoveryKey(roomCode) {
+  const wordlist = [
+    "alpha","bravo","charlie","delta","echo","foxtrot","golf","hotel",
+    "india","juliet","kilo","lima","mike","november","oscar","papa",
+    "quebec","romeo","sierra","tango","uniform","victor","whiskey","xray",
+    "yankee","zulu","able","baker","easy","fox","george","how",
+    "item","jig","king","love","mike","nan","oboe","peter",
+    "queen","roger","sugar","tare","uncle","victor","william","xray",
+    "yoke","zebra","one","two","three","four","five","six",
+    "seven","eight","nine","zero","red","blue","green","yellow"
+  ];
+  
+  const encoder = new TextEncoder();
+  const data = encoder.encode(roomCode + CRYPTO_CONFIG.salt + Date.now());
+  const hash = await crypto.subtle.digest("SHA-256", data);
+  const bytes = new Uint8Array(hash);
+  
+  // Generar 12 palabras desde el hash
+  const words = [];
+  for (let i = 0; i < 12; i++) {
+    const index = bytes[i * 2] % wordlist.length;
+    words.push(wordlist[index]);
+  }
+  
+  return words.join(" ");
+}
+
+/**
+ * Guarda el código de sala cifrado con la recovery key
+ * @param {string} roomCode - Código de sala
+ * @param {string} recoveryKey - Clave de recuperación
+ */
+function saveRoomCodeWithRecovery(roomCode, recoveryKey) {
+  try {
+    const stored = JSON.parse(localStorage.getItem("ghostdrop-recovery") || "{}");
+    stored[recoveryKey] = roomCode;
+    localStorage.setItem("ghostdrop-recovery", JSON.stringify(stored));
+  } catch (e) {
+    console.error("Error guardando recovery key:", e);
+  }
+}
+
+/**
+ * Recupera el código de sala desde la recovery key
+ * @param {string} recoveryKey - Clave de recuperación
+ * @returns {string|null} - Código de sala o null
+ */
+function recoverRoomCode(recoveryKey) {
+  try {
+    const stored = JSON.parse(localStorage.getItem("ghostdrop-recovery") || "{}");
+    return stored[recoveryKey] || null;
+  } catch {
+    return null;
+  }
+}
+
+// Exponer funciones globalmente para módulos ES6
+window.encryptFile = encryptFile;
+window.decryptFile = decryptFile;
+window.encryptText = encryptText;
+window.decryptText = decryptText;
+window.deriveKey = deriveKey;
+window.isCryptoSupported = isCryptoSupported;
+window.generateRecoveryKey = generateRecoveryKey;
+window.saveRoomCodeWithRecovery = saveRoomCodeWithRecovery;
+window.recoverRoomCode = recoverRoomCode;

@@ -1,0 +1,40 @@
+# Archivos que NO se deben desplegar a Vercel
+
+# Node modules
+node_modules/
+
+# Tests
+test-*.js
+test-*.html
+COMANDO-*.txt
+
+# Documentación local
+*.md
+!README.md
+
+# Archivos de desarrollo
+.env.local
+.vscode/
+
+# Playwright
+playwright-report/
+playwright.config.js
+
+# Instaladores
+install.bat
+install.sh
+
+# Archivos de migración
+*.sql
+
+# Frontend (se despliega por separado)
+index.html
+landing.html
+privacy.html
+manifest.json
+qrcode.min.js
+app.js
+crypto.js
+supabase-config.js
+storage-b2.js
+app-telegram-integration.js

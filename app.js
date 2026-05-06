@@ -2,16 +2,12 @@
 // GHOST-DROP — v3
 // ============================================================
 
-// Version check — si cambia, forzar recarga
-const APP_VERSION = "3.4.1";
-if (localStorage.getItem("ghostdrop-version") !== APP_VERSION) {
-  localStorage.setItem("ghostdrop-version", APP_VERSION);
-  // Si ya había una versión previa, recargar para aplicar cambios
-  if (localStorage.getItem("ghostdrop-version") !== null) {
-    console.log("Nueva versión detectada, recargando...");
-    setTimeout(() => location.reload(), 500);
-  }
-}
+// Importar módulo de Backblaze B2
+import { uploadToB2, downloadFromB2, deleteFromB2 } from './storage-b2-client.js';
+
+// Acceso a variables globales desde módulos ES6
+const db = window.db;
+const { encryptFile, decryptFile, encryptText, decryptText } = window;
 
 let TTL_SECONDS = 300;
 let BURN_AFTER_READING = false;
@@ -69,11 +65,24 @@ function hide(...els) { els.forEach(el => el && el.classList.add("hidden")); }
 function formatBytes(b) {
   if (b < 1024) return b + " B";
   if (b < 1048576) return (b / 1024).toFixed(1) + " KB";
-  return (b / 1048576).toFixed(1) + " MB";
+  if (b < 1073741824) return (b / 1048576).toFixed(1) + " MB";
+  return (b / 1073741824).toFixed(2) + " GB";
+}
+
+function formatSpeed(bytesPerSecond) {
+  if (bytesPerSecond < 1024) return bytesPerSecond.toFixed(0) + " B/s";
+  if (bytesPerSecond < 1048576) return (bytesPerSecond / 1024).toFixed(1) + " KB/s";
+  return (bytesPerSecond / 1048576).toFixed(1) + " MB/s";
+}
+
+function formatTime(seconds) {
+  if (seconds < 60) return Math.ceil(seconds) + "s";
+  if (seconds < 3600) return Math.ceil(seconds / 60) + "m";
+  return Math.ceil(seconds / 3600) + "h";
 }
 
 function formatCountdown(s) {
-  if (s <= 0) return "Expiró";
+  if (s <= 0) return window.i18n.t('timerExpired');
   const m = Math.floor(s / 60).toString().padStart(2, "0");
   const sec = (s % 60).toString().padStart(2, "0");
   return `${m}:${sec}`;
@@ -197,7 +206,8 @@ async function loadTotalUploads() {
     }
 
     const n = parseInt(data?.value ?? 0, 10);
-    el.textContent = `✦ ${n.toLocaleString("es")} archivo${n === 1 ? "" : "s"} compartido${n === 1 ? "" : "s"} hasta ahora`;
+    const s = n === 1 ? "" : "s";
+    el.textContent = t('footerStats', {n: n.toLocaleString(window.i18n?.currentLang === 'es' ? 'es' : 'en'), s});
   } catch (e) {
     console.warn("loadTotalUploads catch:", e);
     setTimeout(loadTotalUploads, 5000);
@@ -525,7 +535,7 @@ function showSkeleton() {
 }
 
 // ─── File preview before upload ───────────────────────────
-function showUploadPreview(files) {
+function showUploadPreview(files, currentIndex = -1) {
   let preview = document.getElementById("upload-preview");
   if (!preview) {
     preview = document.createElement("div");
@@ -533,9 +543,18 @@ function showUploadPreview(files) {
     progressWrap.parentNode.insertBefore(preview, progressWrap.nextSibling.nextSibling);
   }
   preview.innerHTML = "";
-  Array.from(files).forEach(f => {
+  Array.from(files).forEach((f, idx) => {
     const div = document.createElement("div");
     div.className = "upload-preview-item";
+    div.dataset.index = idx;
+    
+    // Resaltar el archivo que se está subiendo
+    if (idx === currentIndex) {
+      div.classList.add("uploading-now");
+    } else if (idx < currentIndex) {
+      div.classList.add("uploaded");
+    }
+    
     div.innerHTML = `
       <span class="upload-preview-icon">${getFileIcon(f.name)}</span>
       <span class="upload-preview-name">${f.name.replace(/</g,"&lt;")}</span>
@@ -580,9 +599,10 @@ function updateMembersUI() {
   }).join("");
 
   const extra = membersCount > 6 ? `<div class="avatar avatar-5">+${membersCount - 6}</div>` : "";
+  const peopleLabel = window.i18n ? window.i18n.t('people') : 'personas';
   membersEl.innerHTML = `
     <div class="members-avatars">${avatarsHtml}${extra}</div>
-    <span class="members-label">${membersCount} personas</span>
+    <span class="members-label">${membersCount} ${peopleLabel}</span>
   `;
 }
 
@@ -637,6 +657,11 @@ function showToast(msg, type = "info") {
   toastEl.classList.remove("hidden");
   clearTimeout(toastTimer);
   toastTimer = setTimeout(() => toastEl.classList.add("hidden"), 3000);
+}
+
+// Helper para mensajes traducidos
+function t(key, params = {}) {
+  return window.i18n ? window.i18n.t(key, params) : key;
 }
 
 // ─── Recent rooms ──────────────────────────────────────────
@@ -717,12 +742,12 @@ async function joinRoom(code) {
   roomId = clean;
   addRecent(roomId);
   renderRecent();
-  roomCodeDisp.textContent = `Sala ${roomId}`;
+  roomCodeDisp.textContent = `${t('room')} ${roomId}`;
   copyBtn.dataset.code = roomId;
 
   hide(roomSection);
   show(roomBadge, dropSection, textSection, listSection);
-  setStatus("Conectando…", "info");
+  setStatus(t('statusConnecting'), "info");
 
   // Conexiones en paralelo para mayor velocidad
   await Promise.all([
@@ -741,7 +766,7 @@ async function joinRoom(code) {
   roomSyncTimer = setInterval(() => {
     if (roomId) loadFiles({ showSkeletonLoader: false });
   }, 15000);
-  setStatus(`Sala ${roomId} activa`, "success");
+  setStatus(t('statusActive', {room: roomId}), "success");
 }
 
 function leaveRoom() {
@@ -760,9 +785,9 @@ function leaveRoom() {
   show(roomSection);
   filesList.innerHTML = `
     <li class="empty-state">
-      <span class="empty-ghost">👻</span>
-      <span class="empty-title">La sala está despejada.</span>
-      <span class="empty-sub">El radar no detecta archivos.</span>
+      <span class="empty-ghost">${t('emptyGhost')}</span>
+      <span class="empty-title">${t('emptyTitle')}</span>
+      <span class="empty-sub">${t('emptySub')}</span>
     </li>`;
   roomInput.value = "";
   // Limpiar digit boxes
@@ -771,7 +796,7 @@ function leaveRoom() {
     b.classList.remove("digit-filled");
   });
   dropCount.textContent = "";
-  setStatus("Sin sala activa", "info");
+  setStatus(t('statusNoRoom'), "info");
 }
 
 // ─── Supabase ──────────────────────────────────────────────
@@ -836,9 +861,9 @@ function renderDrops(items) {
   if (!active.length) {
     filesList.innerHTML = `
       <li class="empty-state">
-        <span class="empty-ghost">👻</span>
-        <span class="empty-title">La sala está despejada.</span>
-        <span class="empty-sub">El radar no detecta archivos.</span>
+        <span class="empty-ghost">${t('emptyGhost')}</span>
+        <span class="empty-title">${t('emptyTitle')}</span>
+        <span class="empty-sub">${t('emptySub')}</span>
       </li>`;
     return;
   }
@@ -905,7 +930,9 @@ function buildDropEl(f) {
           data-id="${f.id}"
           data-name="${f.file_name}"
           data-type="${f.content_type || 'application/octet-stream'}"
-          data-burn="${f.burn_after_reading || false}">↓</button>
+          data-burn="${f.burn_after_reading || false}"
+          data-storage="${f.storage || 'supabase'}"
+          data-b2-key="${f.b2_key || ''}">↓</button>
       </div>
       <div class="ttl-bar-wrap"><div class="ttl-bar" id="bar-${f.id}"></div></div>`;
     if (isImage(f.file_name)) loadThumbnail(f, li);
@@ -927,7 +954,15 @@ function attachDropEvents(container) {
         btn.classList.remove("dl-success");
         btn.disabled = false;
       }, 1500);
-      downloadAndDestroy(btn.dataset.path, btn.dataset.id, btn.dataset.name, btn.dataset.type, btn.dataset.burn === "true");
+      downloadAndDestroy(
+        btn.dataset.path,
+        btn.dataset.id,
+        btn.dataset.name,
+        btn.dataset.type,
+        btn.dataset.burn === "true",
+        btn.dataset.storage || "supabase",
+        btn.dataset.b2Key || null
+      );
     });
   });
   container.querySelectorAll(".preview-btn").forEach(btn => {
@@ -951,8 +986,17 @@ function attachDropEvents(container) {
 
 async function loadThumbnail(f, li) {
   try {
-    const { data } = await db.storage.from("ghost-drop").download(f.storage_path);
-    if (!data) return;
+    let data;
+    
+    if (f.storage === "b2") {
+      // Descargar de Backblaze B2
+      data = await downloadFromB2(f.b2_key || f.storage_path);
+    } else {
+      // Descargar de Supabase
+      const { data: supabaseData } = await db.storage.from("ghost-drop").download(f.storage_path);
+      if (!supabaseData) return;
+      data = supabaseData;
+    }
     
     // Descifrar la imagen
     const decryptedBlob = await decryptFile(data, roomId, f.content_type || "image/jpeg");
@@ -1036,13 +1080,10 @@ function updateDropCount(n) {
   
   // Mostrar/ocultar botón "Descargar todo"
   const downloadAllBtn = document.getElementById("download-all-btn");
-  console.log("updateDropCount:", count, "archivos, botón:", downloadAllBtn ? "existe" : "NO EXISTE");
   if (downloadAllBtn) {
     if (count >= 2) {
-      console.log("Mostrando botón descargar todo");
       downloadAllBtn.classList.remove("hidden");
     } else {
-      console.log("Ocultando botón descargar todo");
       downloadAllBtn.classList.add("hidden");
     }
   }
@@ -1050,9 +1091,9 @@ function updateDropCount(n) {
   if (count === 0) {
     filesList.innerHTML = `
       <li class="empty-state">
-        <span class="empty-ghost">👻</span>
-        <span class="empty-title">La sala está despejada.</span>
-        <span class="empty-sub">El radar no detecta archivos.</span>
+        <span class="empty-ghost">${t('emptyGhost')}</span>
+        <span class="empty-title">${t('emptyTitle')}</span>
+        <span class="empty-sub">${t('emptySub')}</span>
       </li>`;
   }
   // Pop animation cuando el número cambia
@@ -1071,13 +1112,40 @@ function uploadWithProgress(url, file, headers) {
     xhr.open("POST", url);
     Object.entries(headers).forEach(([k, v]) => xhr.setRequestHeader(k, v));
 
+    let startTime = Date.now();
+    const speedSamples = []; // Para promedio móvil
+    const MAX_SAMPLES = 5;
+
     xhr.upload.addEventListener("progress", (e) => {
       if (!e.lengthComputable) return;
       const pct = (e.loaded / e.total) * 100;
       // Lerp suave — nunca superar 95% hasta confirmar
       const display = Math.min(pct * 0.95, 95);
       progressBar.style.width = display + "%";
-      setProgressLabel(e.loaded / e.total, file.size);
+      
+      // Calcular velocidad promedio (más estable)
+      const now = Date.now();
+      const elapsed = (now - startTime) / 1000; // segundos totales
+      
+      // Solo calcular después de 1 segundo para evitar valores locos
+      if (elapsed > 1) {
+        const instantSpeed = e.loaded / elapsed;
+        speedSamples.push(instantSpeed);
+        
+        // Mantener solo las últimas N muestras
+        if (speedSamples.length > MAX_SAMPLES) {
+          speedSamples.shift();
+        }
+        
+        // Velocidad promedio
+        const avgSpeed = speedSamples.reduce((a, b) => a + b, 0) / speedSamples.length;
+        const remaining = (e.total - e.loaded) / avgSpeed;
+        
+        setProgressLabel(e.loaded, e.total, avgSpeed, remaining);
+      } else {
+        // Primeros segundos: solo mostrar bytes
+        setProgressLabel(e.loaded, e.total);
+      }
     });
 
     xhr.addEventListener("load", () => {
@@ -1100,15 +1168,43 @@ function uploadWithProgress(url, file, headers) {
   });
 }
 
+// ─── Storage selection ─────────────────────────────────────
+
+function selectStorage(fileSize) {
+  const SUPABASE_MAX = 50 * 1024 * 1024; // 50 MB
+  const B2_MAX = 500 * 1024 * 1024; // 500 MB
+  
+  if (fileSize < SUPABASE_MAX) return "supabase";
+  if (fileSize < B2_MAX) return "b2";
+  throw new Error(`Archivo demasiado grande. Máximo: 500MB`);
+}
+
 // ─── Upload ────────────────────────────────────────────────
 
 async function uploadFiles(files) {
-  if (!roomId) { showToast("Únete a una sala primero", "error"); return; }
+  if (!roomId) { showToast(t('toastJoinFirst'), "error"); return; }
   let uploaded = 0;
+  const filesArray = Array.from(files);
 
-  for (const file of Array.from(files)) {
-    // Flujo normal para archivos ≤50MB
+  for (let i = 0; i < filesArray.length; i++) {
+    const file = filesArray[i];
     if (file.size === 0) continue;
+
+    // Validar tamaño ANTES de cifrar
+    const MAX_SIZE = 500 * 1024 * 1024; // 500MB
+    if (file.size > MAX_SIZE) {
+      showToast(`❌ ${file.name} es demasiado grande. Máximo: 500MB`, "error");
+      continue;
+    }
+
+    // Determinar qué storage usar
+    let storage;
+    try {
+      storage = selectStorage(file.size);
+    } catch (err) {
+      showToast(err.message, "error");
+      continue;
+    }
 
     const rl = checkRateLimit("file", file.size);
     if (!rl.ok) { showToast(rl.msg, "error"); break; }
@@ -1119,8 +1215,8 @@ async function uploadFiles(files) {
     progressBar.classList.remove("progress-indeterminate", "progress-pulse");
     progressBar.style.width = "0%";
     setProgressLabel(0, file.size);
-    showToast(`Cifrando ${file.name.slice(0, 20)}…`, "info");
-    showUploadPreview(files);
+    showToast(t('toastEncrypting', {file: file.name.slice(0, 20)}), "info");
+    showUploadPreview(filesArray, i); // Resaltar archivo actual
     dropzone.classList.add("uploading");
 
     // ── Cifrar archivo ────────────────────────────────────
@@ -1128,7 +1224,7 @@ async function uploadFiles(files) {
     try {
       const { blob } = await encryptFile(file, roomId);
       encryptedFile = blob;
-      showToast(`Subiendo ${file.name.slice(0, 20)}…`, "info");
+      showToast(t('toastUploading', {file: file.name.slice(0, 20)}), "info");
     } catch (err) {
       progressWrap.style.display = "none";
       setProgressLabel(0, 0);
@@ -1137,22 +1233,68 @@ async function uploadFiles(files) {
       continue;
     }
 
-    const ext  = file.name.includes(".") ? file.name.split(".").pop() : "bin";
-    const path = `${roomId}/${Date.now()}_${Math.random().toString(36).slice(2)}.${ext}`;
-
-    // ── Subida con XHR para progreso real ─────────────────
-    const uploadUrl = `${window.SUPABASE_URL}/storage/v1/object/ghost-drop/${path}`;
-
+    let path, b2Key;
     let upErr = null;
-    try {
-      await uploadWithProgress(uploadUrl, encryptedFile, {
-        "Authorization": `Bearer ${window.SUPABASE_ANON_KEY}`,
-        "x-upsert": "true",
-        "Content-Type": "application/octet-stream",
-        "Cache-Control": "3600",
-      });
-    } catch (e) {
-      upErr = e;
+
+    // ── SUBIR A SUPABASE O B2 ─────────────────────────────
+    if (storage === "supabase") {
+      // Subir a Supabase
+      const ext = file.name.includes(".") ? file.name.split(".").pop() : "bin";
+      path = `${roomId}/${Date.now()}_${Math.random().toString(36).slice(2)}.${ext}`;
+      const uploadUrl = `${window.SUPABASE_URL}/storage/v1/object/ghost-drop/${path}`;
+
+      try {
+        await uploadWithProgress(uploadUrl, encryptedFile, {
+          "Authorization": `Bearer ${window.SUPABASE_ANON_KEY}`,
+          "x-upsert": "true",
+          "Content-Type": "application/octet-stream",
+          "Cache-Control": "3600",
+        });
+      } catch (e) {
+        upErr = e;
+      }
+    } else {
+      // Subir a Backblaze B2 DIRECTAMENTE con progreso REAL
+      try {
+        // Remover animación de pulso y transiciones
+        progressBar.classList.remove("progress-pulse");
+        progressBar.style.transition = "none";
+        
+        const startTime = Date.now();
+        const speedSamples = [];
+        const MAX_SAMPLES = 5;
+        
+        const result = await uploadToB2(encryptedFile, file.name, (loaded, total, speed, remaining) => {
+          // Progreso REAL de subida directa a B2 (0-90%)
+          const pct = (loaded / total) * 90;
+          progressBar.style.width = pct + "%";
+          
+          // Mostrar bytes reales con velocidad y tiempo restante
+          setProgressLabel(loaded, total, speed, remaining);
+        });
+        
+        path = result.key;
+        b2Key = result.key;
+        
+        progressBar.style.width = "90%";
+        const label = document.getElementById("progress-label");
+        if (label) {
+          label.textContent = "Guardando en base de datos...";
+        }
+      } catch (e) {
+        // Mensajes de error amigables
+        let errorMsg = "Error subiendo archivo";
+        if (e.message.includes("413") || e.message.includes("too large")) {
+          errorMsg = "Archivo demasiado grande para subir";
+        } else if (e.message.includes("network") || e.message.includes("Failed to fetch")) {
+          errorMsg = "Error de conexión. Verifica tu internet";
+        } else if (e.message.includes("timeout")) {
+          errorMsg = "La subida tardó demasiado. Intenta con un archivo más pequeño";
+        } else if (e.message.includes("CORS")) {
+          errorMsg = "Error de configuración. Contacta al administrador";
+        }
+        upErr = new Error(errorMsg);
+      }
     }
 
     if (upErr) {
@@ -1164,20 +1306,34 @@ async function uploadFiles(files) {
     }
 
     // ── Procesando en servidor ────────────────────────────
-    progressBar.classList.add("progress-pulse");
-    progressBar.style.width = "97%";
-    setProgressLabel(0.97, file.size);
-    document.getElementById("progress-label").textContent = "Procesando en servidor…";
+    progressBar.style.width = "95%";
+    const labelEl = document.getElementById("progress-label");
+    if (labelEl) labelEl.textContent = "Finalizando...";
 
     const expiresAt = new Date(serverNow() + TTL_SECONDS * 1000).toISOString();
-    const { error: dbErr, data: insertData } = await db.from("drops").insert({
-      room_id: roomId, file_name: file.name, file_size: file.size,
-      storage_path: path, expires_at: expiresAt, content_type: file.type || getMimeFromName(file.name),
+    const insertPayload = {
+      room_id: roomId,
+      file_name: file.name,
+      file_size: file.size,
+      storage_path: path,
+      storage: storage,
+      expires_at: expiresAt,
+      content_type: file.type || getMimeFromName(file.name),
       burn_after_reading: BURN_AFTER_READING,
-    }).select("id").single();
+    };
+
+    if (storage === "b2" && b2Key) {
+      insertPayload.b2_key = b2Key;
+    }
+
+    const { error: dbErr, data: insertData } = await db.from("drops").insert(insertPayload).select("id").single();
 
     if (dbErr) {
-      await db.storage.from("ghost-drop").remove([path]);
+      if (storage === "supabase") {
+        await db.storage.from("ghost-drop").remove([path]);
+      } else if (b2Key) {
+        await deleteFromB2(b2Key);
+      }
       progressWrap.style.display = "none";
       progressBar.classList.remove("progress-pulse");
       dropzone.classList.remove("uploading");
@@ -1190,7 +1346,9 @@ async function uploadFiles(files) {
       prependDrop({
         id: insertData.id, room_id: roomId,
         file_name: file.name, file_size: file.size,
-        storage_path: path, expires_at: expiresAt, content_type: file.type || getMimeFromName(file.name),
+        storage_path: path, storage: storage,
+        b2_key: b2Key,
+        expires_at: expiresAt, content_type: file.type || getMimeFromName(file.name),
         burn_after_reading: BURN_AFTER_READING,
       });
     }
@@ -1211,12 +1369,19 @@ async function uploadFiles(files) {
   if (uploaded) showToast(`${uploaded} archivo(s) compartido(s) ✓`, "success");
 }
 
-function setProgressLabel(ratio, totalBytes) {
+function setProgressLabel(loaded, total, speed = null, remaining = null) {
   const label = document.getElementById("progress-label");
   if (!label) return;
-  if (!totalBytes) { label.textContent = ""; return; }
-  const done = Math.floor(ratio * totalBytes);
-  label.textContent = `${formatBytes(done)} / ${formatBytes(totalBytes)}`;
+  if (!total) { label.textContent = ""; return; }
+  
+  let text = `${formatBytes(loaded)} / ${formatBytes(total)}`;
+  
+  // Solo mostrar velocidad (sin tiempo estimado)
+  if (speed && speed > 0) {
+    text += ` · ${formatSpeed(speed)}`;
+  }
+  
+  label.textContent = text;
 }
 
 // ─── Texto ─────────────────────────────────────────────────
@@ -1249,17 +1414,26 @@ async function sendText() {
 
 // ─── Download ──────────────────────────────────────────────
 
-async function downloadAndDestroy(storagePath, dropId, fileName, contentType = "application/octet-stream", burnAfterReading = false) {
+async function downloadAndDestroy(storagePath, dropId, fileName, contentType = "application/octet-stream", burnAfterReading = false, storage = "supabase", b2Key = null) {
   showToast("Descargando…", "info");
 
   try {
-    const { data, error } = await db.storage
-      .from("ghost-drop")
-      .download(storagePath);
+    let data;
+    
+    if (storage === "b2") {
+      // Descargar de Backblaze B2
+      data = await downloadFromB2(b2Key || storagePath);
+    } else {
+      // Descargar de Supabase
+      const { data: supabaseData, error } = await db.storage
+        .from("ghost-drop")
+        .download(storagePath);
 
-    if (error || !data) {
-      showToast(`Error: ${error?.message ?? "Sin datos"}`, "error");
-      return;
+      if (error || !supabaseData) {
+        showToast(`Error: ${error?.message ?? "Sin datos"}`, "error");
+        return;
+      }
+      data = supabaseData;
     }
 
     // Descifrar el archivo
@@ -1289,13 +1463,20 @@ async function downloadAndDestroy(storagePath, dropId, fileName, contentType = "
     if (burnAfterReading) {
       burnedDropIds.add(dropId);
       const { error: delErr } = await db.from("drops").delete().eq("id", dropId);
-      const { error: storageErr } = await db.storage.from("ghost-drop").remove([storagePath]);
+      
+      if (storage === "b2" && b2Key) {
+        await deleteFromB2(b2Key);
+      } else {
+        const { error: storageErr } = await db.storage.from("ghost-drop").remove([storagePath]);
+        if (storageErr) {
+          console.error("burn delete storage:", storageErr);
+        }
+      }
+      
       if (delErr) {
         console.error("burn delete db:", delErr);
       }
-      if (storageErr) {
-        console.error("burn delete storage:", storageErr);
-      }
+      
       realtimeChannel?.send({
         type: "broadcast",
         event: "burn-delete",
@@ -1468,13 +1649,14 @@ async function showQR() {
   show(qrModal);
 }
 
+
 // ─── Limpieza expirados ────────────────────────────────────
 
 async function cleanExpired({ silent = true } = {}) {
   if (!roomId) return { deleted: 0, storageFiles: 0 };
   // Usar serverNow() con margen de 5s — evita borrar por desincronización residual
   const { data, error } = await db.from("drops")
-    .select("id, storage_path, content_type")
+    .select("id, storage_path, content_type, storage, b2_key")
     .eq("room_id", roomId)
     .lt("expires_at", new Date(serverNow() - 5000).toISOString());
   if (error) {
@@ -1486,33 +1668,138 @@ async function cleanExpired({ silent = true } = {}) {
     if (!silent) showToast("No hay expirados pendientes en esta sala", "info");
     return { deleted: 0, storageFiles: 0 };
   }
-  const paths = data.filter(d => d.content_type !== "text" && d.storage_path).map(d => d.storage_path);
-  if (paths.length) {
-    const { error: storageErr } = await db.storage.from("ghost-drop").remove(paths);
+  
+  // Separar archivos de Supabase y B2
+  const supabasePaths = data.filter(d => d.content_type !== "text" && d.storage_path && d.storage !== "b2").map(d => d.storage_path);
+  const b2Keys = data.filter(d => d.storage === "b2" && d.b2_key).map(d => d.b2_key);
+  
+  // Borrar archivos de Supabase
+  if (supabasePaths.length) {
+    const { error: storageErr } = await db.storage.from("ghost-drop").remove(supabasePaths);
     if (storageErr) {
       console.warn("cleanExpired storage:", storageErr);
       if (!silent) showToast(`Storage no limpió todo: ${storageErr.message}`, "warn");
     }
   }
+  
+  // Borrar archivos de B2
+  if (b2Keys.length) {
+    for (const key of b2Keys) {
+      try {
+        await deleteFromB2(key);
+      } catch (err) {
+        console.warn(`cleanExpired B2 (${key}):`, err);
+      }
+    }
+  }
+  
   const { error: deleteErr } = await db.from("drops").delete().in("id", data.map(d => d.id));
   if (deleteErr) {
     console.error("cleanExpired delete:", deleteErr);
     if (!silent) showToast(`BD no limpió todo: ${deleteErr.message}`, "error");
-    return { deleted: 0, storageFiles: paths.length, error: deleteErr };
+    return { deleted: 0, storageFiles: supabasePaths.length + b2Keys.length, error: deleteErr };
   }
-  console.log(`Cleaned ${data.length} expired drops`);
-  if (!silent) showToast(`Limpieza local: ${data.length} registro(s), ${paths.length} archivo(s)`, "success");
-  return { deleted: data.length, storageFiles: paths.length };
+  if (!silent) showToast(`Limpieza local: ${data.length} registro(s), ${supabasePaths.length + b2Keys.length} archivo(s)`, "success");
+  return { deleted: data.length, storageFiles: supabasePaths.length + b2Keys.length };
+}
+
+// Limpieza global de archivos expirados (todas las salas)
+async function cleanExpiredGlobal() {
+  try {
+    const { data, error } = await db.from("drops")
+      .select("id, storage_path, content_type, storage, b2_key")
+      .lt("expires_at", new Date(Date.now() - 5000).toISOString());
+    
+    if (error) {
+      console.error("cleanExpiredGlobal select:", error);
+      return;
+    }
+    
+    if (!data?.length) {
+      return;
+    }
+    
+    // Separar archivos de Supabase y B2
+    const supabasePaths = data.filter(d => d.content_type !== "text" && d.storage_path && d.storage !== "b2").map(d => d.storage_path);
+    const b2Keys = data.filter(d => d.storage === "b2" && d.b2_key).map(d => d.b2_key);
+    
+    // Borrar archivos de Supabase
+    if (supabasePaths.length) {
+      const { error: storageErr } = await db.storage.from("ghost-drop").remove(supabasePaths);
+      if (storageErr) {
+        console.warn("cleanExpiredGlobal storage:", storageErr);
+      }
+    }
+    
+    // Borrar archivos de B2
+    if (b2Keys.length) {
+      for (const key of b2Keys) {
+        try {
+          await deleteFromB2(key);
+        } catch (err) {
+          console.warn(`cleanExpiredGlobal B2 (${key}):`, err);
+        }
+      }
+    }
+    
+    // Borrar registros de la BD
+    const { error: deleteErr } = await db.from("drops").delete().in("id", data.map(d => d.id));
+    if (deleteErr) {
+      console.error("cleanExpiredGlobal delete:", deleteErr);
+    }
+  } catch (err) {
+    console.error("cleanExpiredGlobal error:", err);
+  }
 }
 
 // ─── Eventos ───────────────────────────────────────────────
 
+// Drag & Drop en toda la ventana
+let dragCounter = 0;
+
+window.addEventListener("dragenter", (e) => {
+  e.preventDefault();
+  if (roomId && e.dataTransfer.types.includes("Files")) {
+    dragCounter++;
+    dropzone.classList.add("drag-over");
+    dropzone.scrollIntoView({ behavior: "smooth", block: "center" });
+  }
+});
+
+window.addEventListener("dragleave", (e) => {
+  e.preventDefault();
+  dragCounter--;
+  if (dragCounter === 0) {
+    dropzone.classList.remove("drag-over");
+  }
+});
+
+window.addEventListener("dragover", (e) => {
+  e.preventDefault();
+  if (roomId && e.dataTransfer.types.includes("Files")) {
+    e.dataTransfer.dropEffect = "copy";
+  }
+});
+
+window.addEventListener("drop", (e) => {
+  e.preventDefault();
+  dragCounter = 0;
+  dropzone.classList.remove("drag-over");
+  
+  if (roomId && e.dataTransfer.files.length > 0) {
+    showTTLPicker(e.dataTransfer.files);
+  } else if (!roomId) {
+    showToast(t('toastJoinFirst'), "error");
+  }
+});
+
+// Eventos específicos del dropzone
 dropzone.addEventListener("dragover", e => { e.preventDefault(); dropzone.classList.add("drag-over"); });
 dropzone.addEventListener("dragleave", () => dropzone.classList.remove("drag-over"));
 dropzone.addEventListener("drop", e => {
   e.preventDefault(); dropzone.classList.remove("drag-over");
   if (roomId) showTTLPicker(e.dataTransfer.files);
-  else showToast("Únete a una sala primero", "error");
+  else showToast(t('toastJoinFirst'), "error");
 });
 dropzone.addEventListener("click", () => fileInput.click());
 fileInput.addEventListener("change", () => {
@@ -1531,11 +1818,12 @@ roomInput.addEventListener("input", () => {
 newBtn.addEventListener("click", () => runSlotMachine((code) => joinRoom(code)));
 
 copyBtn.addEventListener("click", () => {
-  const url = `${location.origin}${location.pathname}?sala=${copyBtn.dataset.code}`;
+  const url = `${location.origin}${location.pathname}?room=${copyBtn.dataset.code}`;
   navigator.clipboard.writeText(url).then(() => {
     haptic();
-    copyBtn.textContent = "¡Copiado!";
-    setTimeout(() => copyBtn.innerHTML = `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg> Copiar`, 2000);
+    showToast(t('toastLinkCopied'), "success");
+    copyBtn.textContent = t('toastCopied');
+    setTimeout(() => copyBtn.innerHTML = `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg> <span data-i18n="copyBtn">${t('copyBtn')}</span>`, 2000);
   });
 });
 
@@ -1758,7 +2046,7 @@ async function init() {
   setTimeout(() => document.querySelector(".logo").classList.remove("logo-animate"), 1000);
 
   hide(roomBadge, dropSection, textSection, listSection);
-  setStatus("Sin sala activa", "info");
+  setStatus(t('statusNoRoom'), "info");
   renderRecent();
 
   document.getElementById("compact-btn")?.addEventListener("click", toggleCompact);
@@ -1774,9 +2062,9 @@ async function init() {
   // Calibrar ANTES de cualquier operación para que serverNow() sea correcto
   await calibrateServerTime().catch(() => {});
 
-  // Auto-join por URL
+  // Auto-join por URL (soporta ?sala= y ?room=)
   const params = new URLSearchParams(location.search);
-  const salaParam = params.get("sala");
+  const salaParam = params.get("sala") || params.get("room");
   if (salaParam && sanitizeCode(salaParam).length === 6) {
     joinRoom(sanitizeCode(salaParam));
   } else {
@@ -1784,7 +2072,9 @@ async function init() {
     initOnboarding();
   }
 
-  setInterval(cleanExpired, 60_000);
+  setInterval(cleanExpired, 60_000); // Limpieza local cada minuto
+  setInterval(cleanExpiredGlobal, 2 * 60_000); // Limpieza global cada 2 minutos
+  cleanExpiredGlobal(); // Ejecutar inmediatamente al cargar
   setInterval(calibrateServerTime, 5 * 60_000);
   loadTotalUploads();
 
@@ -1796,7 +2086,6 @@ async function init() {
   document.addEventListener("visibilitychange", () => {
     if (!document.hidden && roomId) {
       // Re-sincronizar cuando vuelves a la pestaña
-      console.log("Pestaña visible, re-sincronizando...");
       loadFiles(); // Recargar archivos del servidor
       cleanExpired({ silent: true }); // Limpiar expirados silenciosamente
     }
@@ -1806,3 +2095,14 @@ async function init() {
 init();
 
 notifyBtn.addEventListener("click", requestNotifications);
+
+// Esperar a que i18n esté listo
+window.addEventListener('load', () => {
+  const langBtn = document.getElementById("lang-btn");
+  if (langBtn && window.i18n) {
+    langBtn.addEventListener("click", () => {
+      window.i18n.toggleLanguage();
+      haptic([8]);
+    });
+  }
+});

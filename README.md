@@ -18,6 +18,14 @@
 | ❌ Archivos permanentes | ✅ Auto-destrucción |
 | ❌ 5 minutos de setup | ✅ 5 segundos |
 | ❌ Sin cifrado o cifrado opaco | ✅ Cifrado E2E transparente |
+| ❌ Límite 50MB | ✅ Hasta 500MB (Backblaze B2) |
+| ❌ Sin recovery | ✅ Recovery key de 12 palabras |
+
+## 🆕 Novedades v3.5.2
+
+- **🔑 Recovery Key**: Clave de recuperación de 12 palabras para no perder acceso
+- **📦 Storage B2**: Archivos grandes hasta 500MB usando Backblaze B2 proxy
+- **🧪 Tests automatizados**: 12 tests E2E con Playwright (100% cobertura crítica)
 
 ## 🔐 Seguridad
 
@@ -25,7 +33,7 @@
 - **Clave derivada del código de sala**: PBKDF2 con 100,000 iteraciones
 - **Supabase solo ve payloads cifrados**: Ni siquiera nosotros podemos leer tus archivos ni textos
 - **Auto-destrucción**: Los archivos se borran automáticamente (1-15 min)
-- **Sin metadatos**: No guardamos IPs, emails, ni identificadores personales
+- **Privacidad por diseño**: Sin cuentas ni perfiles de usuario
 
 ## 💡 Casos de uso
 
@@ -80,13 +88,29 @@ En el dashboard de Supabase:
 ### 5. Row Level Security (RLS)
 
 ```sql
--- Rooms: politica minima para pruebas/MVP
+-- Rooms: baseline para producción (sin auth, pero validado)
 alter table rooms enable row level security;
-create policy "public rooms" on rooms for all using (true) with check (true);
+create policy "rooms_select_all" on rooms for select using (true);
+create policy "rooms_insert_valid_code" on rooms
+  for insert
+  with check (id ~ '^[0-9]{6}$');
+create policy "rooms_update_valid_code" on rooms
+  for update
+  using (id ~ '^[0-9]{6}$')
+  with check (id ~ '^[0-9]{6}$');
 
--- Drops: politica minima para pruebas/MVP
+-- Drops: restringir formato y expiración
 alter table drops enable row level security;
-create policy "public drops" on drops for all using (true) with check (true);
+create policy "drops_select_all" on drops for select using (true);
+create policy "drops_insert_guardrails" on drops
+  for insert
+  with check (
+    room_id ~ '^[0-9]{6}$'
+    and file_size > 0
+    and file_size <= 524288000
+    and expires_at <= now() + interval '15 minutes'
+  );
+create policy "drops_delete_all" on drops for delete using (true);
 ```
 
 ```sql
@@ -182,9 +206,44 @@ npx serve .
 - **Textos y archivos**: Ambos se cifran en el navegador antes de persistirse.
 - **Supabase no puede leer tus archivos**: Solo almacena payloads cifrados.
 - **El código de sala es la clave**: Cualquiera con el código puede descifrar. Compártelo solo con quien confíes.
+- **Recovery Key**: Guarda tu clave de recuperación de 12 palabras para no perder acceso.
 - **Importante**: Un código de 6 dígitos prioriza facilidad de uso, no máxima resistencia ante ataques offline. Para un entorno más sensible conviene usar secretos más largos.
 - **Auto-destrucción**: Requiere tener activo el cleanup server-side en Supabase para borrar tambien el objeto fisico del bucket.
-- **Sin tracking**: No guardamos IPs, emails, ni identificadores personales.
+- **Sin cuentas ni perfiles**: No hay registro de usuarios ni login.
+- **Operación del proxy**: Si activas `B2_PROXY_TOKEN`, los endpoints del proxy exigen token.
+
+---
+
+## 🧪 Testing
+
+Ghost Drop incluye tests automatizados E2E con Playwright:
+
+```bash
+# Instalar dependencias
+npm install
+npx playwright install
+
+# Correr tests
+npm test
+
+# Modo interactivo
+npm run test:ui
+```
+
+**Cobertura:** 12 tests cubriendo flujos críticos (salas, upload/download, cifrado, realtime).
+
+Ver [tests/README.md](tests/README.md) para más detalles.
+
+---
+
+## 📦 Archivos grandes
+
+Ghost Drop soporta archivos hasta **500MB** usando Backblaze B2 mediante proxy:
+
+- **Subida/descarga** via `b2-proxy.js`
+- **Cifrado E2E** siempre en el navegador antes de subir
+
+**Setup:** Ver [SETUP-BACKBLAZE-B2.md](SETUP-BACKBLAZE-B2.md) para configurar B2.
 
 ---
 

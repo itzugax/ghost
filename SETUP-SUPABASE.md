@@ -61,9 +61,26 @@ CREATE INDEX drops_expires_at_idx ON drops(expires_at);
 ALTER TABLE rooms ENABLE ROW LEVEL SECURITY;
 ALTER TABLE drops ENABLE ROW LEVEL SECURITY;
 
--- 5. Políticas de acceso público (cualquiera puede leer/escribir)
-CREATE POLICY "public_rooms" ON rooms FOR ALL USING (true) WITH CHECK (true);
-CREATE POLICY "public_drops" ON drops FOR ALL USING (true) WITH CHECK (true);
+-- 5. Políticas baseline para producción (sin auth de usuarios)
+CREATE POLICY "rooms_select_all" ON rooms FOR SELECT USING (true);
+CREATE POLICY "rooms_insert_valid_code" ON rooms
+  FOR INSERT
+  WITH CHECK (id ~ '^[0-9]{6}$');
+CREATE POLICY "rooms_update_valid_code" ON rooms
+  FOR UPDATE
+  USING (id ~ '^[0-9]{6}$')
+  WITH CHECK (id ~ '^[0-9]{6}$');
+
+CREATE POLICY "drops_select_all" ON drops FOR SELECT USING (true);
+CREATE POLICY "drops_insert_guardrails" ON drops
+  FOR INSERT
+  WITH CHECK (
+    room_id ~ '^[0-9]{6}$'
+    AND file_size > 0
+    AND file_size <= 524288000
+    AND expires_at <= NOW() + interval '15 minutes'
+  );
+CREATE POLICY "drops_delete_all" ON drops FOR DELETE USING (true);
 ```
 
 4. Haz clic en **Run** (▶️)

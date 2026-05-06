@@ -9,3 +9,6 @@ window.SUPABASE_ANON_KEY = SUPABASE_ANON_KEY;
 // El UMD build de supabase.min.js ya declaró `var supabase` como el módulo.
 // supabase.createClient es la función que necesitamos.
 const db = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+// Exponer db globalmente para módulos ES6
+window.db = db;

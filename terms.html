@@ -3,13 +3,21 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Términos de Servicio — Ghost Drop</title>
+  <title data-i18n-title="termsTitle">Términos de Servicio — Ghost Drop</title>
   <link rel="stylesheet" href="style.css" />
   <style>
+    .legal-header {
+      max-width: 680px;
+      margin: 0 auto;
+      padding: 1.5rem 1.5rem 0;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
     .legal-page {
       max-width: 680px;
       margin: 0 auto;
-      padding: 2rem 1.5rem;
+      padding: 1rem 1.5rem 2rem;
     }
     .legal-page h1 {
       font-size: 2.5rem;
@@ -57,7 +65,6 @@
     }
     .back-link {
       display: inline-block;
-      margin-bottom: 2rem;
       color: var(--accent);
       text-decoration: none;
       font-weight: 500;
@@ -68,140 +75,380 @@
   </style>
 </head>
 <body>
+  <div class="legal-header">
+    <a href="/" class="back-link" data-i18n-text="backLink">← Volver a Ghost Drop</a>
+    <button id="lang-btn" class="lang-btn" title="Change language">EN</button>
+  </div>
+  
   <div class="legal-page">
-    <a href="/" class="back-link">← Volver a Ghost Drop</a>
-    
-    <h1>Términos de Servicio</h1>
-    <p class="date">Última actualización: 28 de abril de 2026</p>
+    <h1 data-i18n-text="termsTitle">Términos de Servicio</h1>
+    <p class="date" data-i18n-text="termsDate">Última actualización: 28 de abril de 2026</p>
 
-    <div class="highlight">
+    <div class="highlight" data-i18n-html="termsSummary">
       <strong>Resumen:</strong> Usa Ghost Drop para compartir archivos legales. No abuses. No garantizamos nada. Es gratis. No nos demandes.
     </div>
 
-    <h2>1. Aceptación de términos</h2>
-    <p>Al usar Ghost Drop, aceptas estos términos. Si no estás de acuerdo, no lo uses. Simple.</p>
+    <h2 data-i18n-text="terms1Title">1. Aceptación de términos</h2>
+    <p data-i18n-text="terms1Text">Al usar Ghost Drop, aceptas estos términos. Si no estás de acuerdo, no lo uses. Simple.</p>
 
-    <h2>2. Descripción del servicio</h2>
-    <p>Ghost Drop es una plataforma para compartir archivos de forma temporal y cifrada.</p>
+    <h2 data-i18n-text="terms2Title">2. Descripción del servicio</h2>
+    <p data-i18n-text="terms2Intro">Ghost Drop es una plataforma para compartir archivos de forma temporal y cifrada.</p>
     <ul>
-      <li>Los archivos se cifran en tu navegador</li>
-      <li>Se auto-destruyen en 1-15 minutos</li>
-      <li>No requiere registro</li>
-      <li>Es gratis (por ahora)</li>
+      <li data-i18n-text="terms2Encrypted">Los archivos se cifran en tu navegador</li>
+      <li data-i18n-text="terms2Expire">Se auto-destruyen en 1-15 minutos</li>
+      <li data-i18n-text="terms2NoSignup">No requiere registro</li>
+      <li data-i18n-text="terms2Free">Es gratis (por ahora)</li>
     </ul>
 
-    <h2>3. Uso aceptable</h2>
-    <p><strong>Puedes usar Ghost Drop para:</strong></p>
+    <h2 data-i18n-text="terms3Title">3. Uso aceptable</h2>
+    <p data-i18n-html="terms3CanUse"><strong>Puedes usar Ghost Drop para:</strong></p>
     <ul>
-      <li>✅ Compartir documentos de trabajo</li>
-      <li>✅ Enviar fotos sin comprimir</li>
-      <li>✅ Transferir archivos entre tus dispositivos</li>
-      <li>✅ Compartir contraseñas temporales</li>
+      <li data-i18n-text="terms3Work">✅ Compartir documentos de trabajo</li>
+      <li data-i18n-text="terms3Photos">✅ Enviar fotos sin comprimir</li>
+      <li data-i18n-text="terms3Transfer">✅ Transferir archivos entre tus dispositivos</li>
+      <li data-i18n-text="terms3Passwords">✅ Compartir contraseñas temporales</li>
     </ul>
 
-    <p><strong>NO puedes usar Ghost Drop para:</strong></p>
+    <p data-i18n-html="terms3CannotUse"><strong>NO puedes usar Ghost Drop para:</strong></p>
     <ul>
-      <li>❌ Contenido ilegal (piratería, malware, etc.)</li>
-      <li>❌ Material de abuso infantil</li>
-      <li>❌ Spam o phishing</li>
-      <li>❌ Acosar o amenazar a otros</li>
-      <li>❌ Violar derechos de autor</li>
+      <li data-i18n-text="terms3Illegal">❌ Contenido ilegal (piratería, malware, etc.)</li>
+      <li data-i18n-text="terms3Abuse">❌ Material de abuso infantil</li>
+      <li data-i18n-text="terms3Spam">❌ Spam o phishing</li>
+      <li data-i18n-text="terms3Harass">❌ Acosar o amenazar a otros</li>
+      <li data-i18n-text="terms3Copyright">❌ Violar derechos de autor</li>
     </ul>
 
-    <div class="warning">
+    <div class="warning" data-i18n-html="terms3Warning">
       <strong>⚠️ Importante:</strong> Aunque no podemos ver el contenido de tus archivos (están cifrados), NO uses Ghost Drop para actividades ilegales. Eres responsable de cumplir las leyes de tu país.
     </div>
 
-    <h2>4. Límites del servicio</h2>
+    <h2 data-i18n-text="terms4Title">4. Límites del servicio</h2>
     <ul>
-      <li>Máximo 50 MB por archivo</li>
-      <li>Máximo 10 archivos por hora (rate limiting)</li>
-      <li>Los archivos expiran en 1-15 minutos</li>
+      <li data-i18n-text="terms4Size">Máximo 5 GB por archivo</li>
+      <li data-i18n-text="terms4Rate">Máximo 15 archivos por minuto (rate limiting)</li>
+      <li data-i18n-text="terms4Expire">Los archivos expiran en 1-15 minutos</li>
     </ul>
-    <p>Nos reservamos el derecho de cambiar estos límites sin previo aviso.</p>
+    <p data-i18n-text="terms4Change">Nos reservamos el derecho de cambiar estos límites sin previo aviso.</p>
 
-    <h2>5. Responsabilidad del usuario</h2>
-    <p><strong>Tú eres responsable de:</strong></p>
+    <h2 data-i18n-text="terms5Title">5. Responsabilidad del usuario</h2>
+    <p data-i18n-html="terms5Intro"><strong>Tú eres responsable de:</strong></p>
     <ul>
-      <li>El contenido que subes</li>
-      <li>Con quién compartes los códigos de sala</li>
-      <li>Cumplir las leyes de tu país</li>
-      <li>Hacer backups (los archivos se borran automáticamente)</li>
-    </ul>
-
-    <h2>6. Sin garantías</h2>
-    <p>Ghost Drop se proporciona "tal cual", sin garantías de ningún tipo.</p>
-    <ul>
-      <li>No garantizamos que funcione 24/7</li>
-      <li>No garantizamos que tus archivos no se pierdan</li>
-      <li>No garantizamos que el cifrado sea infalible</li>
-      <li>No garantizamos que el servicio siga siendo gratis</li>
+      <li data-i18n-text="terms5Content">El contenido que subes</li>
+      <li data-i18n-text="terms5Sharing">Con quién compartes los códigos de sala</li>
+      <li data-i18n-text="terms5Laws">Cumplir las leyes de tu país</li>
+      <li data-i18n-text="terms5Backup">Hacer backups (los archivos se borran automáticamente)</li>
     </ul>
 
-    <div class="warning">
+    <h2 data-i18n-text="terms6Title">6. Sin garantías</h2>
+    <p data-i18n-text="terms6Intro">Ghost Drop se proporciona "tal cual", sin garantías de ningún tipo.</p>
+    <ul>
+      <li data-i18n-text="terms6Uptime">No garantizamos que funcione 24/7</li>
+      <li data-i18n-text="terms6Loss">No garantizamos que tus archivos no se pierdan</li>
+      <li data-i18n-text="terms6Security">No garantizamos que el cifrado sea infalible</li>
+      <li data-i18n-text="terms6Free">No garantizamos que el servicio siga siendo gratis</li>
+    </ul>
+
+    <div class="warning" data-i18n-html="terms6Warning">
       <strong>⚠️ Importante:</strong> Haz backups de archivos importantes. Ghost Drop NO es un servicio de almacenamiento permanente.
     </div>
 
-    <h2>7. Limitación de responsabilidad</h2>
-    <p>No somos responsables de:</p>
+    <h2 data-i18n-text="terms7Title">7. Limitación de responsabilidad</h2>
+    <p data-i18n-text="terms7Intro">No somos responsables de:</p>
     <ul>
-      <li>Pérdida de archivos</li>
-      <li>Acceso no autorizado a tus archivos</li>
-      <li>Daños causados por malware en archivos compartidos</li>
-      <li>Interrupciones del servicio</li>
-      <li>Uso indebido por parte de otros usuarios</li>
+      <li data-i18n-text="terms7Loss">Pérdida de archivos</li>
+      <li data-i18n-text="terms7Access">Acceso no autorizado a tus archivos</li>
+      <li data-i18n-text="terms7Malware">Daños causados por malware en archivos compartidos</li>
+      <li data-i18n-text="terms7Interruption">Interrupciones del servicio</li>
+      <li data-i18n-text="terms7Misuse">Uso indebido por parte de otros usuarios</li>
     </ul>
 
-    <h2>8. Propiedad intelectual</h2>
-    <p>Ghost Drop es de código abierto bajo licencia MIT.</p>
-    <p>Tú mantienes todos los derechos sobre los archivos que subes.</p>
-    <p>No reclamamos ningún derecho sobre tu contenido.</p>
+    <h2 data-i18n-text="terms8Title">8. Propiedad intelectual</h2>
+    <p data-i18n-text="terms8OpenSource">Ghost Drop es de código abierto bajo licencia MIT.</p>
+    <p data-i18n-text="terms8YourContent">Tú mantienes todos los derechos sobre los archivos que subes.</p>
+    <p data-i18n-text="terms8NoClaim">No reclamamos ningún derecho sobre tu contenido.</p>
 
-    <h2>9. Modificaciones del servicio</h2>
-    <p>Podemos:</p>
+    <h2 data-i18n-text="terms9Title">9. Modificaciones del servicio</h2>
+    <p data-i18n-text="terms9Intro">Podemos:</p>
     <ul>
-      <li>Cambiar o descontinuar Ghost Drop en cualquier momento</li>
-      <li>Modificar estos términos (te avisaremos)</li>
-      <li>Agregar o quitar funcionalidades</li>
-      <li>Empezar a cobrar (con aviso previo)</li>
+      <li data-i18n-text="terms9Change">Cambiar o descontinuar Ghost Drop en cualquier momento</li>
+      <li data-i18n-text="terms9Terms">Modificar estos términos (te avisaremos)</li>
+      <li data-i18n-text="terms9Features">Agregar o quitar funcionalidades</li>
+      <li data-i18n-text="terms9Pricing">Empezar a cobrar (con aviso previo)</li>
     </ul>
 
-    <h2>10. Terminación</h2>
-    <p>Podemos suspender o terminar tu acceso si:</p>
+    <h2 data-i18n-text="terms10Title">10. Terminación</h2>
+    <p data-i18n-text="terms10Intro">Podemos suspender o terminar tu acceso si:</p>
     <ul>
-      <li>Violas estos términos</li>
-      <li>Abusas del servicio (spam, ataques, etc.)</li>
-      <li>Lo usas para actividades ilegales</li>
+      <li data-i18n-text="terms10Violate">Violas estos términos</li>
+      <li data-i18n-text="terms10Abuse">Abusas del servicio (spam, ataques, etc.)</li>
+      <li data-i18n-text="terms10Illegal">Lo usas para actividades ilegales</li>
     </ul>
 
-    <h2>11. Ley aplicable</h2>
-    <p>Estos términos se rigen por las leyes de [tu país/estado].</p>
-    <p>Cualquier disputa se resolverá en los tribunales de [tu jurisdicción].</p>
+    <h2 data-i18n-text="terms11Title">11. Ley aplicable</h2>
+    <p data-i18n-text="terms11Law">Estos términos se rigen por las leyes de España.</p>
+    <p data-i18n-text="terms11Disputes">Cualquier disputa se resolverá en los tribunales de España.</p>
 
-    <h2>12. Contacto</h2>
-    <p>Preguntas sobre estos términos:</p>
+    <h2 data-i18n-text="terms12Title">12. Contacto</h2>
+    <p data-i18n-text="terms12Intro">Preguntas sobre estos términos:</p>
     <ul>
-      <li>Email: <a href="mailto:jorgeugax@gmail.com">jorgeugax@gmail.com</a></li>
-      <li>GitHub: <a href="https://github.com/itzugax/ghost/issues" target="_blank">Abrir issue</a></li>
+      <li data-i18n-html="terms12Email">Email: <a href="mailto:jorgeugax@gmail.com">jorgeugax@gmail.com</a></li>
+      <li data-i18n-html="terms12GitHub">GitHub: <a href="https://github.com/itzugax/ghost/issues" target="_blank">Abrir issue</a></li>
     </ul>
 
-    <h2>13. Código abierto</h2>
-    <p>Ghost Drop es open source. Puedes:</p>
+    <h2 data-i18n-text="terms13Title">13. Código abierto</h2>
+    <p data-i18n-text="terms13Intro">Ghost Drop es open source. Puedes:</p>
     <ul>
-      <li>Ver el código: <a href="https://github.com/itzugax/ghost" target="_blank">GitHub</a></li>
-      <li>Reportar bugs</li>
-      <li>Contribuir con mejoras</li>
-      <li>Hacer tu propia versión (respetando la licencia MIT)</li>
+      <li data-i18n-html="terms13Code">Ver el código: <a href="https://github.com/itzugax/ghost" target="_blank">GitHub</a></li>
+      <li data-i18n-text="terms13Bugs">Reportar bugs</li>
+      <li data-i18n-text="terms13Contribute">Contribuir con mejoras</li>
+      <li data-i18n-text="terms13Fork">Hacer tu propia versión (respetando la licencia MIT)</li>
     </ul>
 
-    <div class="highlight">
+    <div class="highlight" data-i18n-html="termsFinalSummary">
       <strong>Resumen:</strong> Sé legal, no abuses, no nos demandes. Usas Ghost Drop bajo tu propio riesgo.
     </div>
 
     <p style="margin-top: 3rem; text-align: center; color: var(--text-3);">
-      <a href="/">← Volver a Ghost Drop</a> · 
-      <a href="/privacy.html">Política de Privacidad</a>
+      <a href="/" data-i18n-text="backLink">← Volver a Ghost Drop</a> · 
+      <a href="/privacy.html" data-i18n-text="privacyLink">Política de Privacidad</a>
     </p>
   </div>
+  
+  <script src="i18n.js"></script>
+  <script>
+    // Extender traducciones para página de términos
+    const termsTranslations = {
+      es: {
+        termsTitle: "Términos de Servicio",
+        termsDate: "Última actualización: 28 de abril de 2026",
+        termsSummary: "<strong>Resumen:</strong> Usa Ghost Drop para compartir archivos legales. No abuses. No garantizamos nada. Es gratis. No nos demandes.",
+        backLink: "← Volver a Ghost Drop",
+        privacyLink: "Política de Privacidad",
+        
+        terms1Title: "1. Aceptación de términos",
+        terms1Text: "Al usar Ghost Drop, aceptas estos términos. Si no estás de acuerdo, no lo uses. Simple.",
+        
+        terms2Title: "2. Descripción del servicio",
+        terms2Intro: "Ghost Drop es una plataforma para compartir archivos de forma temporal y cifrada.",
+        terms2Encrypted: "Los archivos se cifran en tu navegador",
+        terms2Expire: "Se auto-destruyen en 1-15 minutos",
+        terms2NoSignup: "No requiere registro",
+        terms2Free: "Es gratis (por ahora)",
+        
+        terms3Title: "3. Uso aceptable",
+        terms3CanUse: "<strong>Puedes usar Ghost Drop para:</strong>",
+        terms3Work: "✅ Compartir documentos de trabajo",
+        terms3Photos: "✅ Enviar fotos sin comprimir",
+        terms3Transfer: "✅ Transferir archivos entre tus dispositivos",
+        terms3Passwords: "✅ Compartir contraseñas temporales",
+        terms3CannotUse: "<strong>NO puedes usar Ghost Drop para:</strong>",
+        terms3Illegal: "❌ Contenido ilegal (piratería, malware, etc.)",
+        terms3Abuse: "❌ Material de abuso infantil",
+        terms3Spam: "❌ Spam o phishing",
+        terms3Harass: "❌ Acosar o amenazar a otros",
+        terms3Copyright: "❌ Violar derechos de autor",
+        terms3Warning: "<strong>⚠️ Importante:</strong> Aunque no podemos ver el contenido de tus archivos (están cifrados), NO uses Ghost Drop para actividades ilegales. Eres responsable de cumplir las leyes de tu país.",
+        
+        terms4Title: "4. Límites del servicio",
+        terms4Size: "Máximo 5 GB por archivo",
+        terms4Rate: "Máximo 15 archivos por minuto (rate limiting)",
+        terms4Expire: "Los archivos expiran en 1-15 minutos",
+        terms4Change: "Nos reservamos el derecho de cambiar estos límites sin previo aviso.",
+        
+        terms5Title: "5. Responsabilidad del usuario",
+        terms5Intro: "<strong>Tú eres responsable de:</strong>",
+        terms5Content: "El contenido que subes",
+        terms5Sharing: "Con quién compartes los códigos de sala",
+        terms5Laws: "Cumplir las leyes de tu país",
+        terms5Backup: "Hacer backups (los archivos se borran automáticamente)",
+        
+        terms6Title: "6. Sin garantías",
+        terms6Intro: 'Ghost Drop se proporciona "tal cual", sin garantías de ningún tipo.',
+        terms6Uptime: "No garantizamos que funcione 24/7",
+        terms6Loss: "No garantizamos que tus archivos no se pierdan",
+        terms6Security: "No garantizamos que el cifrado sea infalible",
+        terms6Free: "No garantizamos que el servicio siga siendo gratis",
+        terms6Warning: "<strong>⚠️ Importante:</strong> Haz backups de archivos importantes. Ghost Drop NO es un servicio de almacenamiento permanente.",
+        
+        terms7Title: "7. Limitación de responsabilidad",
+        terms7Intro: "No somos responsables de:",
+        terms7Loss: "Pérdida de archivos",
+        terms7Access: "Acceso no autorizado a tus archivos",
+        terms7Malware: "Daños causados por malware en archivos compartidos",
+        terms7Interruption: "Interrupciones del servicio",
+        terms7Misuse: "Uso indebido por parte de otros usuarios",
+        
+        terms8Title: "8. Propiedad intelectual",
+        terms8OpenSource: "Ghost Drop es de código abierto bajo licencia MIT.",
+        terms8YourContent: "Tú mantienes todos los derechos sobre los archivos que subes.",
+        terms8NoClaim: "No reclamamos ningún derecho sobre tu contenido.",
+        
+        terms9Title: "9. Modificaciones del servicio",
+        terms9Intro: "Podemos:",
+        terms9Change: "Cambiar o descontinuar Ghost Drop en cualquier momento",
+        terms9Terms: "Modificar estos términos (te avisaremos)",
+        terms9Features: "Agregar o quitar funcionalidades",
+        terms9Pricing: "Empezar a cobrar (con aviso previo)",
+        
+        terms10Title: "10. Terminación",
+        terms10Intro: "Podemos suspender o terminar tu acceso si:",
+        terms10Violate: "Violas estos términos",
+        terms10Abuse: "Abusas del servicio (spam, ataques, etc.)",
+        terms10Illegal: "Lo usas para actividades ilegales",
+        
+        terms11Title: "11. Ley aplicable",
+        terms11Law: "Estos términos se rigen por las leyes de España.",
+        terms11Disputes: "Cualquier disputa se resolverá en los tribunales de España.",
+        
+        terms12Title: "12. Contacto",
+        terms12Intro: "Preguntas sobre estos términos:",
+        terms12Email: 'Email: <a href="mailto:jorgeugax@gmail.com">jorgeugax@gmail.com</a>',
+        terms12GitHub: 'GitHub: <a href="https://github.com/itzugax/ghost/issues" target="_blank">Abrir issue</a>',
+        
+        terms13Title: "13. Código abierto",
+        terms13Intro: "Ghost Drop es open source. Puedes:",
+        terms13Code: 'Ver el código: <a href="https://github.com/itzugax/ghost" target="_blank">GitHub</a>',
+        terms13Bugs: "Reportar bugs",
+        terms13Contribute: "Contribuir con mejoras",
+        terms13Fork: "Hacer tu propia versión (respetando la licencia MIT)",
+        
+        termsFinalSummary: "<strong>Resumen:</strong> Sé legal, no abuses, no nos demandes. Usas Ghost Drop bajo tu propio riesgo.",
+      },
+      en: {
+        termsTitle: "Terms of Service",
+        termsDate: "Last updated: April 28, 2026",
+        termsSummary: "<strong>Summary:</strong> Use Ghost Drop to share legal files. Don't abuse it. We don't guarantee anything. It's free. Don't sue us.",
+        backLink: "← Back to Ghost Drop",
+        privacyLink: "Privacy Policy",
+        
+        terms1Title: "1. Acceptance of terms",
+        terms1Text: "By using Ghost Drop, you accept these terms. If you don't agree, don't use it. Simple.",
+        
+        terms2Title: "2. Service description",
+        terms2Intro: "Ghost Drop is a platform for sharing files temporarily and encrypted.",
+        terms2Encrypted: "Files are encrypted in your browser",
+        terms2Expire: "They self-destruct in 1-15 minutes",
+        terms2NoSignup: "No registration required",
+        terms2Free: "It's free (for now)",
+        
+        terms3Title: "3. Acceptable use",
+        terms3CanUse: "<strong>You can use Ghost Drop for:</strong>",
+        terms3Work: "✅ Sharing work documents",
+        terms3Photos: "✅ Sending uncompressed photos",
+        terms3Transfer: "✅ Transferring files between your devices",
+        terms3Passwords: "✅ Sharing temporary passwords",
+        terms3CannotUse: "<strong>You CANNOT use Ghost Drop for:</strong>",
+        terms3Illegal: "❌ Illegal content (piracy, malware, etc.)",
+        terms3Abuse: "❌ Child abuse material",
+        terms3Spam: "❌ Spam or phishing",
+        terms3Harass: "❌ Harassing or threatening others",
+        terms3Copyright: "❌ Violating copyright",
+        terms3Warning: "<strong>⚠️ Important:</strong> Although we can't see the content of your files (they're encrypted), DO NOT use Ghost Drop for illegal activities. You are responsible for complying with your country's laws.",
+        
+        terms4Title: "4. Service limits",
+        terms4Size: "Maximum 5 GB per file",
+        terms4Rate: "Maximum 15 files per minute (rate limiting)",
+        terms4Expire: "Files expire in 1-15 minutes",
+        terms4Change: "We reserve the right to change these limits without notice.",
+        
+        terms5Title: "5. User responsibility",
+        terms5Intro: "<strong>You are responsible for:</strong>",
+        terms5Content: "The content you upload",
+        terms5Sharing: "Who you share room codes with",
+        terms5Laws: "Complying with your country's laws",
+        terms5Backup: "Making backups (files are automatically deleted)",
+        
+        terms6Title: "6. No warranties",
+        terms6Intro: 'Ghost Drop is provided "as is", without warranties of any kind.',
+        terms6Uptime: "We don't guarantee it will work 24/7",
+        terms6Loss: "We don't guarantee your files won't be lost",
+        terms6Security: "We don't guarantee encryption is infallible",
+        terms6Free: "We don't guarantee the service will remain free",
+        terms6Warning: "<strong>⚠️ Important:</strong> Make backups of important files. Ghost Drop is NOT a permanent storage service.",
+        
+        terms7Title: "7. Limitation of liability",
+        terms7Intro: "We are not responsible for:",
+        terms7Loss: "Loss of files",
+        terms7Access: "Unauthorized access to your files",
+        terms7Malware: "Damage caused by malware in shared files",
+        terms7Interruption: "Service interruptions",
+        terms7Misuse: "Misuse by other users",
+        
+        terms8Title: "8. Intellectual property",
+        terms8OpenSource: "Ghost Drop is open source under MIT license.",
+        terms8YourContent: "You retain all rights to the files you upload.",
+        terms8NoClaim: "We claim no rights to your content.",
+        
+        terms9Title: "9. Service modifications",
+        terms9Intro: "We may:",
+        terms9Change: "Change or discontinue Ghost Drop at any time",
+        terms9Terms: "Modify these terms (we'll notify you)",
+        terms9Features: "Add or remove features",
+        terms9Pricing: "Start charging (with prior notice)",
+        
+        terms10Title: "10. Termination",
+        terms10Intro: "We may suspend or terminate your access if:",
+        terms10Violate: "You violate these terms",
+        terms10Abuse: "You abuse the service (spam, attacks, etc.)",
+        terms10Illegal: "You use it for illegal activities",
+        
+        terms11Title: "11. Applicable law",
+        terms11Law: "These terms are governed by the laws of Spain.",
+        terms11Disputes: "Any disputes will be resolved in Spanish courts.",
+        
+        terms12Title: "12. Contact",
+        terms12Intro: "Questions about these terms:",
+        terms12Email: 'Email: <a href="mailto:jorgeugax@gmail.com">jorgeugax@gmail.com</a>',
+        terms12GitHub: 'GitHub: <a href="https://github.com/itzugax/ghost/issues" target="_blank">Open issue</a>',
+        
+        terms13Title: "13. Open source",
+        terms13Intro: "Ghost Drop is open source. You can:",
+        terms13Code: 'View the code: <a href="https://github.com/itzugax/ghost" target="_blank">GitHub</a>',
+        terms13Bugs: "Report bugs",
+        terms13Contribute: "Contribute improvements",
+        terms13Fork: "Make your own version (respecting MIT license)",
+        
+        termsFinalSummary: "<strong>Summary:</strong> Be legal, don't abuse, don't sue us. You use Ghost Drop at your own risk.",
+      }
+    };
+    
+    function updateTermsPage() {
+      const lang = window.i18n.currentLang;
+      const t = termsTranslations[lang];
+      
+      // Actualizar todos los elementos con data-i18n-text
+      document.querySelectorAll('[data-i18n-text]').forEach(el => {
+        const key = el.getAttribute('data-i18n-text');
+        if (t[key]) el.textContent = t[key];
+      });
+      
+      // Actualizar todos los elementos con data-i18n-html
+      document.querySelectorAll('[data-i18n-html]').forEach(el => {
+        const key = el.getAttribute('data-i18n-html');
+        if (t[key]) el.innerHTML = t[key];
+      });
+      
+      // Actualizar título de la página
+      document.title = t.termsTitle + " — Ghost Drop";
+      
+      // Actualizar botón de idioma
+      const langBtn = document.getElementById('lang-btn');
+      if (langBtn) {
+        langBtn.textContent = lang === 'es' ? 'EN' : 'ES';
+        langBtn.title = lang === 'es' ? 'Switch to English' : 'Cambiar a Español';
+      }
+      
+      document.documentElement.lang = lang;
+    }
+    
+    // Event listener para botón de idioma
+    document.getElementById('lang-btn')?.addEventListener('click', () => {
+      window.i18n.toggleLanguage();
+      updateTermsPage();
+    });
+    
+    // Actualizar al cargar
+    updateTermsPage();
+  </script>
 </body>
 </html>

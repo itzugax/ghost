@@ -352,57 +352,29 @@ class I18n {
 // Instancia global
 window.i18n = new I18n();
 
-// Función simple y robusta para el botón de idioma
-function initLanguageButton() {
-  const langBtn = document.getElementById('lang-btn');
-  if (!langBtn) {
-    setTimeout(initLanguageButton, 200);
-    return;
-  }
+// Función SÚPER SIMPLE para el botón
+function setupLanguageButton() {
+  var btn = document.getElementById('lang-btn');
+  if (!btn) return;
   
-  // Evitar duplicados
-  if (langBtn.hasAttribute('data-initialized')) {
-    return;
-  }
-  langBtn.setAttribute('data-initialized', 'true');
-  
-  // Actualizar texto inicial
-  langBtn.textContent = window.i18n.currentLang === 'es' ? 'EN' : 'ES';
-  
-  // Evento simple
-  langBtn.onclick = function() {
-    console.log('🌐 Click detectado');
-    
+  btn.onclick = function() {
     // Cambiar idioma
-    var currentLang = window.i18n.currentLang;
-    var newLang = currentLang === 'es' ? 'en' : 'es';
-    
-    console.log('🌐 Cambiando de ' + currentLang + ' a ' + newLang);
-    
-    // Actualizar
+    var newLang = window.i18n.currentLang === 'es' ? 'en' : 'es';
     window.i18n.currentLang = newLang;
     localStorage.setItem('ghostdrop-lang', newLang);
-    document.documentElement.lang = newLang;
     
     // Actualizar botón
-    langBtn.textContent = newLang === 'es' ? 'EN' : 'ES';
+    btn.textContent = newLang === 'es' ? 'EN' : 'ES';
     
-    // Actualizar UI
+    // Actualizar página
     window.i18n.updateUI();
-    
-    console.log('🌐 Cambio completado');
   };
-  
-  console.log('🌐 Botón inicializado');
 }
 
-// Inicializar múltiples veces para asegurar que funcione
-if (document.readyState === 'loading') {
-  document.addEventListener('DOMContentLoaded', initLanguageButton);
-} else {
-  initLanguageButton();
-}
-
-setTimeout(initLanguageButton, 100);
-setTimeout(initLanguageButton, 500);
-setTimeout(initLanguageButton, 1000);
+// Intentar cada 500ms hasta que funcione
+setInterval(function() {
+  var btn = document.getElementById('lang-btn');
+  if (btn && !btn.onclick) {
+    setupLanguageButton();
+  }
+}, 500);

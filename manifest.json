@@ -1,8 +1,8 @@
 {
-  "name": "Ghost Drop — Comparte archivos en 5 segundos",
-  "short_name": "GhostDrop",
-  "version": "3.4.1",
-  "description": "Comparte archivos cifrados sin registro. Cero fricción.",
+  "name": "Ghost Drop v3.6 — Comparte archivos en 5 segundos",
+  "short_name": "GhostDrop v3.6",
+  "version": "3.6.0",
+  "description": "Comparte archivos cifrados sin registro. Ahora con UX mejorada y cambio de idioma fluido.",
   "start_url": "./",
   "display": "standalone",
   "background_color": "#f2f2f7",

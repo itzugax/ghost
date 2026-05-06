@@ -1293,27 +1293,46 @@ function uploadWithProgress(url, file, headers) {
 
 // ─── Storage selection ─────────────────────────────────────
 
-function selectStorage(fileSize) {
+async function selectStorage(fileSize) {
   const SUPABASE_MAX = 50 * 1024 * 1024; // 50 MB
   const B2_MAX = 500 * 1024 * 1024; // 500 MB
   
-  // Siempre usar Supabase primero, independientemente del tamaño
-  // hasta que B2 esté configurado correctamente
   if (fileSize <= SUPABASE_MAX) {
     return "supabase";
   }
   
   // Para archivos grandes, verificar si B2 está disponible
   if (fileSize <= B2_MAX) {
-    // En desarrollo, verificar si el proxy está corriendo
-    if (window.location.hostname === 'localhost') {
-      console.warn('⚠️ Archivo >50MB detectado. Necesitas iniciar el proxy B2:');
-      console.warn('   npm run proxy');
-      console.warn('   O configura las credenciales B2 en .env.local');
+    console.log('📁 Archivo grande detectado, verificando B2...');
+    
+    try {
+      // Verificar si B2 está configurado y funcionando
+      const response = await fetch('/health');
+      if (response.ok) {
+        const data = await response.json();
+        
+        // Verificar que B2 esté completamente configurado
+        if (data.status === 'ok' && 
+            data.keyId === 'CONFIGURED' && 
+            data.appKey === 'CONFIGURED' && 
+            data.s3ClientReady === true) {
+          console.log('✅ B2 configurado correctamente, usando B2');
+          return "b2";
+        }
+      }
+    } catch (error) {
+      console.warn('⚠️ Error verificando B2:', error);
     }
     
-    // Por ahora, rechazar archivos >50MB hasta que B2 esté configurado
-    throw new Error(`Archivo demasiado grande (${formatBytes(fileSize)}). Máximo actual: 50MB. Para archivos más grandes, configura Backblaze B2.`);
+    // Si B2 no está disponible, mostrar mensaje informativo
+    throw new Error(`Archivo grande detectado (${formatBytes(fileSize)}). 
+
+🔧 Para subir archivos >50MB, configura Backblaze B2:
+1. Ve a Vercel Dashboard → Settings → Environment Variables
+2. Verifica que todas las variables B2_* estén configuradas
+3. Redesplega la aplicación
+
+Mientras tanto, puedes subir archivos hasta 50MB.`);
   }
   
   throw new Error(`Archivo demasiado grande. Máximo: 500MB (${formatBytes(fileSize)} recibido)`);
@@ -1343,7 +1362,7 @@ async function uploadFiles(files) {
     // Determinar qué storage usar
     let storage;
     try {
-      storage = selectStorage(file.size);
+      storage = await selectStorage(file.size);
       console.log(`📁 Archivo ${file.name} (${formatBytes(file.size)}) → ${storage.toUpperCase()}`);
     } catch (err) {
       showToast(err.message, "error");

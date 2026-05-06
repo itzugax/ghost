@@ -341,11 +341,15 @@ class I18n {
     if (langBtn) {
       langBtn.textContent = this.currentLang === 'es' ? 'EN' : 'ES';
       langBtn.title = this.currentLang === 'es' ? 'Switch to English' : 'Cambiar a Español';
-      // Agregar listener si no existe
-      if (!langBtn.dataset.listenerAdded) {
-        langBtn.addEventListener('click', () => this.toggleLanguage());
-        langBtn.dataset.listenerAdded = 'true';
+      
+      // Remover listener anterior si existe
+      if (langBtn._i18nListener) {
+        langBtn.removeEventListener('click', langBtn._i18nListener);
       }
+      
+      // Agregar nuevo listener
+      langBtn._i18nListener = () => this.toggleLanguage();
+      langBtn.addEventListener('click', langBtn._i18nListener);
     }
   }
   

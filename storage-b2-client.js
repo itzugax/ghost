@@ -24,19 +24,30 @@ export async function uploadToB2(blob, fileName, onProgress = null) {
   return new Promise(async (resolve, reject) => {
     try {
       // 1. Obtener URL firmada del proxy
-      const key = `${Date.now()}_${Math.random().toString(36).slice(2)}_${fileName}`;
+      const key = `${Date.now()}_${Math.random().toString(36).slice(2)}_${fileName.replace(/[^A-Za-z0-9._-]/g, '_')}`;
       
       const urlResponse = await fetch(`${PROXY_URL}/get-upload-url`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ key, contentType: blob.type || 'application/octet-stream' })
+        headers: { 
+          'Content-Type': 'application/json',
+          'X-Proxy-Token': localStorage.getItem('b2-proxy-token') || ''
+        },
+        body: JSON.stringify({ 
+          key, 
+          contentType: blob.type || 'application/octet-stream' 
+        })
       });
       
       if (!urlResponse.ok) {
-        throw new Error('No se pudo obtener URL de subida');
+        const errorData = await urlResponse.json().catch(() => ({}));
+        throw new Error(errorData.error || `HTTP ${urlResponse.status}: No se pudo obtener URL de subida`);
       }
       
       const { uploadUrl } = await urlResponse.json();
+      
+      if (!uploadUrl) {
+        throw new Error('URL de subida no recibida del servidor');
+      }
       
       // 2. Subir DIRECTAMENTE a B2 con progreso real
       const xhr = new XMLHttpRequest();
@@ -77,7 +88,15 @@ export async function uploadToB2(blob, fileName, onProgress = null) {
         if (xhr.status >= 200 && xhr.status < 300) {
           resolve({ key, size: blob.size });
         } else {
-          reject(new Error(`HTTP ${xhr.status}: ${xhr.statusText}`));
+          let errorMsg = `HTTP ${xhr.status}: ${xhr.statusText}`;
+          if (xhr.status === 413) {
+            errorMsg = "Archivo demasiado grande para el servidor";
+          } else if (xhr.status === 403) {
+            errorMsg = "Acceso denegado al servidor de archivos";
+          } else if (xhr.status === 500) {
+            errorMsg = "Error interno del servidor de archivos";
+          }
+          reject(new Error(errorMsg));
         }
       });
       
@@ -88,6 +107,13 @@ export async function uploadToB2(blob, fileName, onProgress = null) {
       xhr.addEventListener('abort', () => {
         reject(new Error('Subida cancelada'));
       });
+      
+      xhr.addEventListener('timeout', () => {
+        reject(new Error('Tiempo de espera agotado'));
+      });
+      
+      // Timeout de 10 minutos para archivos grandes
+      xhr.timeout = 10 * 60 * 1000;
       
       xhr.send(blob);
       

@@ -89,18 +89,48 @@ app.use((req, res, next) => {
   next();
 });
 
-app.use((err, req, res, next) => {
-  if (err && /CORS/i.test(err.message || '')) {
+// Middleware para manejar errores de multer
+app.use((error, req, res, next) => {
+  if (error instanceof multer.MulterError) {
+    if (error.code === 'LIMIT_FILE_SIZE') {
+      return res.status(413).json({ 
+        error: `Archivo demasiado grande. Máximo: ${MAX_UPLOAD_MB}MB` 
+      });
+    }
+    if (error.code === 'LIMIT_UNEXPECTED_FILE') {
+      return res.status(400).json({ 
+        error: 'Archivo no esperado' 
+      });
+    }
+    return res.status(400).json({ 
+      error: `Error de archivo: ${error.message}` 
+    });
+  }
+  
+  if (error && /CORS/i.test(error.message || '')) {
     return res.status(403).json({ error: 'Origin blocked by CORS policy' });
   }
-  return next(err);
+  
+  console.error('Unhandled error:', error);
+  return res.status(500).json({ 
+    error: 'Error interno del servidor',
+    details: IS_PRODUCTION ? undefined : error.message
+  });
 });
 
 // Configurar multer para archivos grandes (por defecto 500MB)
 const upload = multer({
   storage: multer.memoryStorage(),
   limits: {
-    fileSize: MAX_UPLOAD_BYTES
+    fileSize: MAX_UPLOAD_BYTES,
+    fieldSize: MAX_UPLOAD_BYTES
+  },
+  fileFilter: (req, file, cb) => {
+    // Validar tipo de archivo básico
+    if (!file.originalname || file.originalname.length > 255) {
+      return cb(new Error('Nombre de archivo inválido'));
+    }
+    cb(null, true);
   }
 });
 
@@ -198,6 +228,10 @@ app.post('/upload', upload.single('file'), async (req, res) => {
       return res.status(400).json({ error: 'No file provided' });
     }
 
+    if (req.file.size > MAX_UPLOAD_BYTES) {
+      return res.status(413).json({ error: `File too large. Maximum: ${MAX_UPLOAD_MB}MB` });
+    }
+
     const originalName = (req.body.fileName || req.file.originalname || 'file.bin')
       .replace(/[^A-Za-z0-9._-]/g, '_')
       .slice(0, 120);
@@ -216,7 +250,8 @@ app.post('/upload', upload.single('file'), async (req, res) => {
       Body: req.file.buffer,
       ContentType: req.file.mimetype || 'application/octet-stream',
       Metadata: {
-        'original-name': originalName
+        'original-name': originalName,
+        'upload-time': new Date().toISOString()
       }
     });
 
@@ -234,8 +269,24 @@ app.post('/upload', upload.single('file'), async (req, res) => {
 
   } catch (error) {
     console.error('❌ Error subiendo a B2:', error);
-    res.status(500).json({
-      error: error.message || 'Error subiendo archivo'
+    
+    let statusCode = 500;
+    let errorMessage = 'Error subiendo archivo';
+    
+    if (error.name === 'PayloadTooLargeError' || error.code === 'LIMIT_FILE_SIZE') {
+      statusCode = 413;
+      errorMessage = `Archivo demasiado grande. Máximo: ${MAX_UPLOAD_MB}MB`;
+    } else if (error.code === 'ECONNRESET' || error.code === 'ENOTFOUND') {
+      statusCode = 503;
+      errorMessage = 'Error de conexión con el servidor de archivos';
+    } else if (error.code === 'AccessDenied') {
+      statusCode = 403;
+      errorMessage = 'Acceso denegado al servidor de archivos';
+    }
+    
+    res.status(statusCode).json({
+      error: errorMessage,
+      details: IS_PRODUCTION ? undefined : error.message
     });
   }
 });
@@ -260,10 +311,17 @@ app.get('/download/:key', async (req, res) => {
     // Configurar headers para la descarga
     res.setHeader('Content-Type', response.ContentType || 'application/octet-stream');
     res.setHeader('Content-Length', response.ContentLength);
+    res.setHeader('Cache-Control', 'private, no-cache');
+    res.setHeader('X-Content-Type-Options', 'nosniff');
+    
+    // Headers CORS más permisivos para desarrollo
     if (!IS_PRODUCTION || allowedOrigins.length === 0) {
       res.setHeader('Access-Control-Allow-Origin', '*');
     } else {
-      res.setHeader('Access-Control-Allow-Origin', allowedOrigins[0]);
+      const origin = req.headers.origin;
+      if (allowedOrigins.includes(origin)) {
+        res.setHeader('Access-Control-Allow-Origin', origin);
+      }
     }
     res.setHeader('Access-Control-Allow-Methods', 'GET');
     res.setHeader('Access-Control-Allow-Headers', '*');
@@ -275,8 +333,21 @@ app.get('/download/:key', async (req, res) => {
 
   } catch (error) {
     console.error('❌ Error descargando:', error);
-    res.status(500).json({
-      error: error.message || 'Error descargando archivo'
+    
+    let statusCode = 500;
+    let errorMessage = 'Error descargando archivo';
+    
+    if (error.name === 'NoSuchKey' || error.code === 'NoSuchKey') {
+      statusCode = 404;
+      errorMessage = 'Archivo no encontrado';
+    } else if (error.name === 'AccessDenied' || error.code === 'AccessDenied') {
+      statusCode = 403;
+      errorMessage = 'Acceso denegado al archivo';
+    }
+    
+    res.status(statusCode).json({
+      error: errorMessage,
+      details: IS_PRODUCTION ? undefined : error.message
     });
   }
 });

@@ -456,7 +456,30 @@ function runSlotMachine(callback) {
 }
 
 // ─── Sonido de sintonización ───────────────────────────────
-// ─── Sonido de sintonización ───────────────────────────────
+
+function playPing() {
+  // Crear un sonido de ping usando Web Audio API
+  try {
+    const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+    const oscillator = audioContext.createOscillator();
+    const gainNode = audioContext.createGain();
+    
+    oscillator.connect(gainNode);
+    gainNode.connect(audioContext.destination);
+    
+    oscillator.frequency.setValueAtTime(800, audioContext.currentTime);
+    oscillator.frequency.exponentialRampToValueAtTime(400, audioContext.currentTime + 0.1);
+    
+    gainNode.gain.setValueAtTime(0.1, audioContext.currentTime);
+    gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.1);
+    
+    oscillator.start(audioContext.currentTime);
+    oscillator.stop(audioContext.currentTime + 0.1);
+  } catch (e) {
+    // Fallback silencioso si Web Audio API no está disponible
+    console.log("Ping sound not available");
+  }
+}
 
 // ─── TTL Picker ────────────────────────────────────────────
 
@@ -1174,9 +1197,9 @@ function selectStorage(fileSize) {
   const SUPABASE_MAX = 50 * 1024 * 1024; // 50 MB
   const B2_MAX = 500 * 1024 * 1024; // 500 MB
   
-  if (fileSize < SUPABASE_MAX) return "supabase";
-  if (fileSize < B2_MAX) return "b2";
-  throw new Error(`Archivo demasiado grande. Máximo: 500MB`);
+  if (fileSize <= SUPABASE_MAX) return "supabase";
+  if (fileSize <= B2_MAX) return "b2";
+  throw new Error(`Archivo demasiado grande. Máximo: 500MB (${formatBytes(fileSize)} recibido)`);
 }
 
 // ─── Upload ────────────────────────────────────────────────
@@ -1188,12 +1211,15 @@ async function uploadFiles(files) {
 
   for (let i = 0; i < filesArray.length; i++) {
     const file = filesArray[i];
-    if (file.size === 0) continue;
+    if (file.size === 0) {
+      showToast(`❌ ${file.name} está vacío`, "error");
+      continue;
+    }
 
     // Validar tamaño ANTES de cifrar
     const MAX_SIZE = 500 * 1024 * 1024; // 500MB
     if (file.size > MAX_SIZE) {
-      showToast(`❌ ${file.name} es demasiado grande. Máximo: 500MB`, "error");
+      showToast(`❌ ${file.name} es demasiado grande. Máximo: 500MB (actual: ${formatBytes(file.size)})`, "error");
       continue;
     }
 
@@ -1201,6 +1227,7 @@ async function uploadFiles(files) {
     let storage;
     try {
       storage = selectStorage(file.size);
+      console.log(`📁 Archivo ${file.name} (${formatBytes(file.size)}) → ${storage.toUpperCase()}`);
     } catch (err) {
       showToast(err.message, "error");
       continue;
@@ -1284,14 +1311,18 @@ async function uploadFiles(files) {
       } catch (e) {
         // Mensajes de error amigables
         let errorMsg = "Error subiendo archivo";
-        if (e.message.includes("413") || e.message.includes("too large")) {
+        if (e.message.includes("413") || e.message.includes("too large") || e.message.includes("PayloadTooLargeError")) {
           errorMsg = "Archivo demasiado grande para subir";
-        } else if (e.message.includes("network") || e.message.includes("Failed to fetch")) {
+        } else if (e.message.includes("network") || e.message.includes("Failed to fetch") || e.message.includes("NetworkError")) {
           errorMsg = "Error de conexión. Verifica tu internet";
-        } else if (e.message.includes("timeout")) {
+        } else if (e.message.includes("timeout") || e.message.includes("TimeoutError")) {
           errorMsg = "La subida tardó demasiado. Intenta con un archivo más pequeño";
-        } else if (e.message.includes("CORS")) {
+        } else if (e.message.includes("CORS") || e.message.includes("cors")) {
           errorMsg = "Error de configuración. Contacta al administrador";
+        } else if (e.message.includes("401") || e.message.includes("403")) {
+          errorMsg = "Error de autenticación con el servidor de archivos";
+        } else if (e.message.includes("500") || e.message.includes("502") || e.message.includes("503")) {
+          errorMsg = "Servidor temporalmente no disponible. Intenta más tarde";
         }
         upErr = new Error(errorMsg);
       }

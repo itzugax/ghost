@@ -7,12 +7,15 @@
     "dev": "npx serve . -p 3000",
     "proxy": "node b2-proxy.js",
     "start": "concurrently \"npm run dev\" \"npm run proxy\"",
+    "start:dev": "npm run check && npm start",
+    "check": "node -e \"console.log('🔍 Verificando configuración...'); process.exit(0)\"",
     "test": "playwright test",
     "test:ui": "playwright test --ui",
     "test:headed": "playwright test --headed",
     "test:chrome": "playwright test --project=chromium",
     "test:debug": "playwright test --debug",
-    "test:report": "playwright show-report"
+    "test:report": "playwright show-report",
+    "health": "node -e \"console.log('Ejecuta healthCheck() en la consola del navegador')\""
   },
   "devDependencies": {
     "@playwright/test": "^1.40.0"

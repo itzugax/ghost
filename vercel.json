@@ -1,79 +1,56 @@
 {
-  "version": 2,
-  "builds": [
+  "functions": {
+    "b2-proxy.js": {
+      "maxDuration": 300
+    }
+  },
+  "rewrites": [
     {
-      "src": "b2-proxy.js",
-      "use": "@vercel/node"
+      "source": "/api/(.*)",
+      "destination": "/b2-proxy.js"
     },
     {
-      "src": "supabase-config.js",
-      "use": "@vercel/static"
+      "source": "/health",
+      "destination": "/b2-proxy.js"
     },
     {
-      "src": "app.js",
-      "use": "@vercel/static"
+      "source": "/get-upload-url",
+      "destination": "/b2-proxy.js"
     },
     {
-      "src": "crypto.js",
-      "use": "@vercel/static"
+      "source": "/upload",
+      "destination": "/b2-proxy.js"
     },
     {
-      "src": "i18n.js",
-      "use": "@vercel/static"
+      "source": "/download/(.*)",
+      "destination": "/b2-proxy.js"
     },
     {
-      "src": "storage-b2-client.js",
-      "use": "@vercel/static"
+      "source": "/delete/(.*)",
+      "destination": "/b2-proxy.js"
     },
     {
-      "src": "supabase.min.js",
-      "use": "@vercel/static"
-    },
-    {
-      "src": "qrcode.min.js",
-      "use": "@vercel/static"
-    },
-    {
-      "src": "*.html",
-      "use": "@vercel/static"
-    },
-    {
-      "src": "*.css",
-      "use": "@vercel/static"
-    },
-    {
-      "src": "*.svg",
-      "use": "@vercel/static"
-    },
-    {
-      "src": "*.json",
-      "use": "@vercel/static"
+      "source": "/setup-cors",
+      "destination": "/b2-proxy.js"
     }
   ],
-  "routes": [
+  "headers": [
     {
-      "src": "/health",
-      "dest": "/b2-proxy.js"
-    },
-    {
-      "src": "/setup-cors",
-      "dest": "/b2-proxy.js"
-    },
-    {
-      "src": "/get-upload-url",
-      "dest": "/b2-proxy.js"
-    },
-    {
-      "src": "/upload",
-      "dest": "/b2-proxy.js"
-    },
-    {
-      "src": "/download/(.*)",
-      "dest": "/b2-proxy.js"
-    },
-    {
-      "src": "/delete/(.*)",
-      "dest": "/b2-proxy.js"
+      "source": "/(.*)",
+      "headers": [
+        {
+          "key": "X-Content-Type-Options",
+          "value": "nosniff"
+        },
+        {
+          "key": "X-Frame-Options",
+          "value": "DENY"
+        },
+        {
+          "key": "Referrer-Policy",
+          "value": "no-referrer"
+        }
+      ]
     }
   ]
 }

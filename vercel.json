@@ -1,37 +1,33 @@
 {
   "functions": {
-    "b2-proxy.js": {
+    "api/b2-proxy.js": {
       "maxDuration": 300
     }
   },
   "rewrites": [
     {
-      "source": "/api/(.*)",
-      "destination": "/b2-proxy.js"
-    },
-    {
       "source": "/health",
-      "destination": "/b2-proxy.js"
+      "destination": "/api/b2-proxy"
     },
     {
       "source": "/get-upload-url",
-      "destination": "/b2-proxy.js"
+      "destination": "/api/b2-proxy"
     },
     {
       "source": "/upload",
-      "destination": "/b2-proxy.js"
+      "destination": "/api/b2-proxy"
     },
     {
       "source": "/download/(.*)",
-      "destination": "/b2-proxy.js"
+      "destination": "/api/b2-proxy"
     },
     {
       "source": "/delete/(.*)",
-      "destination": "/b2-proxy.js"
+      "destination": "/api/b2-proxy"
     },
     {
       "source": "/setup-cors",
-      "destination": "/b2-proxy.js"
+      "destination": "/api/b2-proxy"
     }
   ],
   "headers": [

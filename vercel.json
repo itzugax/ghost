@@ -6,6 +6,30 @@
       "use": "@vercel/node"
     },
     {
+      "src": "app.js",
+      "use": "@vercel/static"
+    },
+    {
+      "src": "crypto.js",
+      "use": "@vercel/static"
+    },
+    {
+      "src": "i18n.js",
+      "use": "@vercel/static"
+    },
+    {
+      "src": "storage-b2-client.js",
+      "use": "@vercel/static"
+    },
+    {
+      "src": "supabase.min.js",
+      "use": "@vercel/static"
+    },
+    {
+      "src": "qrcode.min.js",
+      "use": "@vercel/static"
+    },
+    {
       "src": "*.html",
       "use": "@vercel/static"
     },
@@ -46,10 +70,6 @@
     {
       "src": "/delete/(.*)",
       "dest": "/b2-proxy.js"
-    },
-    {
-      "src": "/(.*)",
-      "dest": "/$1"
     }
   ]
 }

@@ -204,6 +204,10 @@ function serverNow() {
   return now;
 }
 
+// Exponer funciones globalmente para debugging
+window.getSecsLeft = getSecsLeft;
+window.serverNow = serverNow;
+
 // ─── Contador global ──────────────────────────────────────
 
 async function loadTotalUploads() {

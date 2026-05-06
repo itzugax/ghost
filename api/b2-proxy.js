@@ -61,6 +61,12 @@ function isValidStorageKey(key) {
 }
 
 function authMiddleware(req, res, next) {
+  // En producción (Vercel), no requerir token para simplificar
+  if (process.env.VERCEL || process.env.NODE_ENV === 'production') {
+    return next();
+  }
+  
+  // Solo en desarrollo local requerir token si está configurado
   if (!SERVER_TOKEN) return next();
   const token = req.headers['x-proxy-token'];
   if (token !== SERVER_TOKEN) {
@@ -186,10 +192,19 @@ app.get('/health', (req, res) => {
     endpoint: process.env.B2_ENDPOINT || 'NOT_CONFIGURED',
     keyId: process.env.B2_KEY_ID ? 'CONFIGURED' : 'NOT_CONFIGURED',
     appKey: process.env.B2_APPLICATION_KEY ? 'CONFIGURED' : 'NOT_CONFIGURED',
-    timestamp: new Date().toISOString()
+    s3ClientReady: !!s3Client,
+    timestamp: new Date().toISOString(),
+    authRequired: !process.env.VERCEL && !!SERVER_TOKEN
   };
   
   console.log('🏥 Health check:', config);
+  
+  // Si las credenciales no están configuradas, devolver warning pero no error
+  if (!s3Client) {
+    config.status = 'warning';
+    config.message = 'B2 credentials not configured - large files disabled';
+  }
+  
   res.json(config);
 });
 

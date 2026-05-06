@@ -1605,7 +1605,8 @@ async function downloadAndDestroy(storagePath, dropId, fileName, contentType = "
         console.log(`📊 Progreso B2: ${loaded} bytes, ${percent}%, ${formatSpeed(speed || 0)}`);
         
         // Mostrar progreso SOLO en toasts (notificaciones de abajo)
-        if (percent > 0 && percent % 5 === 0) { // Cada 5% para no saturar
+        // Actualizar cada 1% para eliminar silencios
+        if (percent > 0) {
           showToast(`Descargando: ${percent}% (${formatBytes(loaded)} de ${formatBytes(total)})`, "info");
         }
       });
@@ -1645,13 +1646,13 @@ async function downloadAndDestroy(storagePath, dropId, fileName, contentType = "
     try {
       const decryptStart = Date.now();
       
-      // Para archivos grandes, mostrar progreso de descifrado en toasts
+      // Para archivos grandes, mostrar progreso de descifrado continuo
       if (storage === "b2" && data.size > 10 * 1024 * 1024) {
         let decryptProgress = 0;
         decryptTimer = setInterval(() => {
-          decryptProgress = Math.min(95, decryptProgress + 5);
+          decryptProgress = Math.min(95, decryptProgress + 2);
           showToast(`Descifrando: ${decryptProgress}%`, "info");
-        }, 500);
+        }, 200); // Cada 200ms para progreso continuo
       }
       
       decryptedBlob = await decryptFile(data, roomId, contentType);

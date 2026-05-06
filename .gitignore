@@ -10,9 +10,6 @@ node_modules/
 supabase/.branches/
 supabase/.temp/
 
-# Supabase credentials
-supabase-config.js
-
 # Editores
 .vscode/settings.json
 .vscode/

@@ -359,18 +359,28 @@ function initI18n() {
   // Configurar botón de idioma
   const langBtn = document.getElementById('lang-btn');
   if (langBtn) {
+    // Verificar si ya está configurado
+    if (langBtn.dataset.i18nConfigured === 'true') {
+      console.log('🌐 Botón de idioma ya configurado, saltando...');
+      return;
+    }
+    
     // Remover eventos anteriores
     langBtn.replaceWith(langBtn.cloneNode(true));
     const newLangBtn = document.getElementById('lang-btn');
+    
+    // Marcar como configurado
+    newLangBtn.dataset.i18nConfigured = 'true';
     
     // Agregar evento único
     newLangBtn.addEventListener('click', function(e) {
       e.preventDefault();
       e.stopPropagation();
+      console.log('🌐 Click en botón de idioma detectado');
       toggleLanguage();
     });
     
-    console.log('🌐 Botón de idioma configurado');
+    console.log('🌐 Botón de idioma configurado correctamente');
   } else {
     console.warn('🌐 Botón de idioma no encontrado');
   }
@@ -383,7 +393,31 @@ window.i18n = {
   set currentLang(lang) { currentLang = lang; },
   t: t,
   toggleLanguage: toggleLanguage,
-  applyTranslations: applyTranslations
+  applyTranslations: applyTranslations,
+  // Función de debug
+  debug: function() {
+    const langBtn = document.getElementById('lang-btn');
+    console.log('🌐 Debug i18n:');
+    console.log('  - Idioma actual:', currentLang);
+    console.log('  - Botón encontrado:', !!langBtn);
+    console.log('  - Botón configurado:', langBtn?.dataset.i18nConfigured === 'true');
+    console.log('  - Texto del botón:', langBtn?.textContent);
+    return {
+      currentLang,
+      buttonFound: !!langBtn,
+      buttonConfigured: langBtn?.dataset.i18nConfigured === 'true',
+      buttonText: langBtn?.textContent
+    };
+  },
+  // Función para forzar reinicialización
+  forceInit: function() {
+    console.log('🌐 Forzando reinicialización...');
+    const langBtn = document.getElementById('lang-btn');
+    if (langBtn) {
+      langBtn.dataset.i18nConfigured = 'false';
+    }
+    initI18n();
+  }
 };
 
 // ─── Auto-inicialización ───────────────────────────────────
@@ -395,10 +429,27 @@ if (document.readyState === 'loading') {
   initI18n();
 }
 
-// Reintentar después de un delay por si acaso
+// Múltiples reintentos para asegurar que funcione
 setTimeout(() => {
-  if (document.getElementById('lang-btn') && !document.getElementById('lang-btn').onclick) {
-    console.log('🌐 Reintentando inicialización...');
+  const langBtn = document.getElementById('lang-btn');
+  if (langBtn && !langBtn.dataset.i18nConfigured) {
+    console.log('🌐 Reintentando inicialización (1s)...');
     initI18n();
   }
 }, 1000);
+
+setTimeout(() => {
+  const langBtn = document.getElementById('lang-btn');
+  if (langBtn && !langBtn.dataset.i18nConfigured) {
+    console.log('🌐 Reintentando inicialización (2s)...');
+    initI18n();
+  }
+}, 2000);
+
+setTimeout(() => {
+  const langBtn = document.getElementById('lang-btn');
+  if (langBtn && !langBtn.dataset.i18nConfigured) {
+    console.log('🌐 Reintentando inicialización (3s)...');
+    initI18n();
+  }
+}, 3000);

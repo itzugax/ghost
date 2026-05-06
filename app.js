@@ -1,5 +1,5 @@
 // ============================================================
-// GHOST-DROP — v3.6
+// GHOST-DROP — v3
 // ============================================================
 
 // Importar módulo de Backblaze B2
@@ -1600,22 +1600,15 @@ async function downloadAndDestroy(storagePath, dropId, fileName, contentType = "
       
       // Mostrar barra de progreso para archivos B2
       if (progressEl && progressWrap) {
-        // Asegurar que se muestre en el lugar correcto
-        progressWrap.style.display = 'block';
         progressWrap.classList.remove('hidden');
         progressEl.style.width = '5%'; // Mostrar algo inmediatamente
         progressEl.textContent = 'Conectando...';
         if (progressLabel) {
           progressLabel.textContent = 'Iniciando descarga desde Backblaze B2...';
-          progressLabel.style.display = 'block';
         }
-        console.log('📊 Barra de progreso B2 inicializada en el lugar correcto');
-        console.log('📊 Progress wrap display:', progressWrap.style.display);
-        console.log('📊 Progress wrap classes:', progressWrap.className);
+        console.log('📊 Barra de progreso B2 inicializada');
       } else {
         console.warn('⚠️ No se encontraron elementos de progreso');
-        console.warn('⚠️ progressEl:', progressEl);
-        console.warn('⚠️ progressWrap:', progressWrap);
       }
       
       // Fallback: actualizar progreso cada 2 segundos si no hay callbacks
@@ -1634,7 +1627,7 @@ async function downloadAndDestroy(storagePath, dropId, fileName, contentType = "
       }, 2000);
       
       data = await downloadFromB2(b2Key || storagePath, (loaded, total, percent, speed) => {
-        console.log(`📊 Progreso B2: ${loaded} bytes, ${percent}%`);
+        console.log(`📊 Progreso B2: ${loaded} bytes, ${percent}%, ${formatSpeed(speed || 0)}`);
         
         // Actualizar barra de progreso visual - SIEMPRE
         if (progressEl) {
@@ -1644,12 +1637,13 @@ async function downloadAndDestroy(storagePath, dropId, fileName, contentType = "
           console.log(`📊 Barra actualizada: ${displayPercent}%`);
         }
         
-        // Actualizar label con formato solicitado: "X MB de Y MB"
+        // Actualizar label con información detallada
         if (progressLabel) {
-          if (total) {
-            progressLabel.textContent = `${formatBytes(loaded)} de ${formatBytes(total)}`;
+          if (total && speed) {
+            const remaining = (total - loaded) / speed;
+            progressLabel.textContent = `${formatBytes(loaded)} de ${formatBytes(total)} - ${formatSpeed(speed)} - ${formatTime(remaining)} restante`;
           } else {
-            progressLabel.textContent = `Descargado: ${formatBytes(loaded)}`;
+            progressLabel.textContent = `Descargado: ${formatBytes(loaded)} - ${formatSpeed(speed || 0)}`;
           }
         }
         
@@ -1753,12 +1747,10 @@ async function downloadAndDestroy(storagePath, dropId, fileName, contentType = "
     
     // Ocultar barra de progreso
     if (progressWrap) {
-      progressWrap.style.display = 'none';
       progressWrap.classList.add('hidden');
     }
     if (progressLabel) {
       progressLabel.textContent = '';
-      progressLabel.style.display = 'none';
     }
     
     // Si es burn after reading, borrar inmediatamente
@@ -1799,12 +1791,10 @@ async function downloadAndDestroy(storagePath, dropId, fileName, contentType = "
     
     // Ocultar barra de progreso en caso de error
     if (progressWrap) {
-      progressWrap.style.display = 'none';
       progressWrap.classList.add('hidden');
     }
     if (progressLabel) {
       progressLabel.textContent = '';
-      progressLabel.style.display = 'none';
     }
     
     console.error('❌ Error en descarga:', e);
@@ -2314,14 +2304,14 @@ function initOnboarding() {
   const hasSeenOnboarding = localStorage.getItem(ONBOARDING_KEY);
   
   if (!hasSeenOnboarding) {
-    // Mostrar tooltip después de 800ms
+    // Mostrar tooltip casi inmediatamente (50ms para que el DOM se estabilice)
     setTimeout(() => {
       const tooltip = document.getElementById("onboarding-tooltip");
       if (tooltip && !roomId) { // Solo si no está en una sala
         tooltip.classList.remove("hidden");
         haptic([8]);
       }
-    }, 800);
+    }, 50);
     
     // Cerrar tooltip con botón X
     const closeBtn = document.getElementById("onboarding-close");
@@ -2382,17 +2372,21 @@ async function init() {
   // TTL Picker
   initTTLPicker();
 
-  // Calibrar ANTES de cualquier operación para que serverNow() sea correcto
-  await calibrateServerTime().catch(() => {});
-
   // Auto-join por URL (soporta ?sala= y ?room=)
   const params = new URLSearchParams(location.search);
   const salaParam = params.get("sala") || params.get("room");
+  
+  // Mostrar onboarding INMEDIATAMENTE si no hay auto-join
+  if (!salaParam || sanitizeCode(salaParam).length !== 6) {
+    initOnboarding();
+  }
+
+  // Calibrar DESPUÉS del onboarding para no bloquear la UI
+  await calibrateServerTime().catch(() => {});
+
+  // Procesar auto-join después de la calibración
   if (salaParam && sanitizeCode(salaParam).length === 6) {
     joinRoom(sanitizeCode(salaParam));
-  } else {
-    // Mostrar onboarding solo si no hay auto-join
-    initOnboarding();
   }
 
   setInterval(cleanExpired, 60_000); // Limpieza local cada minuto

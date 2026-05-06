@@ -2,15 +2,15 @@
   "version": 2,
   "builds": [
     {
+      "src": "b2-proxy.js",
+      "use": "@vercel/node"
+    },
+    {
       "src": "*.html",
       "use": "@vercel/static"
     },
     {
       "src": "*.css",
-      "use": "@vercel/static"
-    },
-    {
-      "src": "*.js",
       "use": "@vercel/static"
     },
     {
@@ -20,14 +20,6 @@
     {
       "src": "*.json",
       "use": "@vercel/static"
-    },
-    {
-      "src": "*.min.js",
-      "use": "@vercel/static"
-    },
-    {
-      "src": "b2-proxy.js",
-      "use": "@vercel/node"
     }
   ],
   "routes": [
@@ -54,6 +46,10 @@
     {
       "src": "/delete/(.*)",
       "dest": "/b2-proxy.js"
+    },
+    {
+      "src": "/(.*)",
+      "dest": "/$1"
     }
   ]
 }

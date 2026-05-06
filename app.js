@@ -695,12 +695,12 @@ function animateExpire(fileId, mode = "normal") {
 
 
 let toastTimer = null;
-function showToast(msg, type = "info") {
+function showToast(msg, type = "info", duration = 3000) {
   toastEl.textContent = msg;
   toastEl.className   = `toast toast-${type}`;
   toastEl.classList.remove("hidden");
   clearTimeout(toastTimer);
-  toastTimer = setTimeout(() => toastEl.classList.add("hidden"), 3000);
+  toastTimer = setTimeout(() => toastEl.classList.add("hidden"), duration);
 }
 
 // Helper para mensajes traducidos
@@ -1604,10 +1604,9 @@ async function downloadAndDestroy(storagePath, dropId, fileName, contentType = "
       data = await downloadFromB2(b2Key || storagePath, (loaded, total, percent, speed) => {
         console.log(`📊 Progreso B2: ${loaded} bytes, ${percent}%, ${formatSpeed(speed || 0)}`);
         
-        // Mostrar progreso SOLO en toasts (notificaciones de abajo)
-        // Actualizar cada 1% para eliminar silencios
-        if (percent > 0) {
-          showToast(`Descargando: ${percent}% (${formatBytes(loaded)} de ${formatBytes(total)})`, "info");
+        // Mostrar progreso en toasts cada 10% con duración de 5 segundos
+        if (percent > 0 && (percent === 10 || percent === 20 || percent === 30 || percent === 40 || percent === 50 || percent === 60 || percent === 70 || percent === 80 || percent === 90)) {
+          showToast(`📥 Descargando: ${percent}% (${formatBytes(loaded)} de ${formatBytes(total)})`, "info", 5000);
         }
       });
       
@@ -1646,13 +1645,13 @@ async function downloadAndDestroy(storagePath, dropId, fileName, contentType = "
     try {
       const decryptStart = Date.now();
       
-      // Para archivos grandes, mostrar progreso de descifrado continuo
+      // Para archivos grandes, mostrar progreso de descifrado en toasts
       if (storage === "b2" && data.size > 10 * 1024 * 1024) {
         let decryptProgress = 0;
         decryptTimer = setInterval(() => {
-          decryptProgress = Math.min(95, decryptProgress + 2);
+          decryptProgress = Math.min(95, decryptProgress + 5);
           showToast(`Descifrando: ${decryptProgress}%`, "info");
-        }, 200); // Cada 200ms para progreso continuo
+        }, 500);
       }
       
       decryptedBlob = await decryptFile(data, roomId, contentType);

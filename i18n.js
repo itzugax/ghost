@@ -285,6 +285,7 @@ const translations = {
 class I18n {
   constructor() {
     this.currentLang = this.detectLanguage();
+    this.buttonInitialized = false;
     this.loadLanguage(this.currentLang);
   }
   
@@ -336,35 +337,46 @@ class I18n {
       }
     });
     
-    // Actualizar botón de idioma con mejor inicialización
-    this.initLanguageButton();
+    // Inicializar botón de idioma solo una vez
+    if (!this.buttonInitialized) {
+      this.initLanguageButton();
+    } else {
+      // Solo actualizar texto si ya está inicializado
+      this.updateLanguageButtonText();
+    }
+  }
+  
+  updateLanguageButtonText() {
+    const langBtn = document.getElementById('lang-btn');
+    if (langBtn) {
+      langBtn.textContent = this.currentLang === 'es' ? 'EN' : 'ES';
+      langBtn.title = this.currentLang === 'es' ? 'Switch to English' : 'Cambiar a Español';
+    }
   }
   
   initLanguageButton() {
     const langBtn = document.getElementById('lang-btn');
     if (!langBtn) {
-      // Si el botón no existe aún, intentar de nuevo en el próximo tick
+      // Reintentar en 100ms si no existe
       setTimeout(() => this.initLanguageButton(), 100);
       return;
     }
     
-    // Actualizar texto y título
-    langBtn.textContent = this.currentLang === 'es' ? 'EN' : 'ES';
-    langBtn.title = this.currentLang === 'es' ? 'Switch to English' : 'Cambiar a Español';
+    // Marcar como inicializado para evitar duplicados
+    this.buttonInitialized = true;
     
-    // Remover TODOS los listeners anteriores para evitar duplicados
-    const newBtn = langBtn.cloneNode(true);
-    langBtn.parentNode.replaceChild(newBtn, langBtn);
+    // Actualizar texto
+    this.updateLanguageButtonText();
     
-    // Agregar listener único
-    newBtn.addEventListener('click', (e) => {
+    // Agregar evento UNA SOLA VEZ
+    langBtn.addEventListener('click', (e) => {
       e.preventDefault();
       e.stopPropagation();
-      console.log('🌐 Cambiando idioma de', this.currentLang, 'a', this.currentLang === 'es' ? 'en' : 'es');
+      console.log('🌐 Cambiando idioma:', this.currentLang, '→', this.currentLang === 'es' ? 'en' : 'es');
       this.toggleLanguage();
     });
     
-    console.log('🌐 Botón de idioma inicializado:', this.currentLang);
+    console.log('🌐 Botón de idioma inicializado correctamente');
   }
   
   toggleLanguage() {
@@ -376,16 +388,10 @@ class I18n {
 // Instancia global
 window.i18n = new I18n();
 
-// Asegurar inicialización cuando el DOM esté listo
-if (document.readyState === 'loading') {
-  document.addEventListener('DOMContentLoaded', () => {
-    console.log('🌐 DOM listo, reinicializando i18n...');
+// Inicialización única cuando el DOM esté listo
+document.addEventListener('DOMContentLoaded', () => {
+  console.log('🌐 DOM listo, inicializando botón de idioma...');
+  if (!window.i18n.buttonInitialized) {
     window.i18n.initLanguageButton();
-  });
-} else {
-  // DOM ya está listo
-  setTimeout(() => {
-    console.log('🌐 DOM ya listo, inicializando i18n...');
-    window.i18n.initLanguageButton();
-  }, 100);
-}
+  }
+});

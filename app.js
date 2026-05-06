@@ -1680,21 +1680,53 @@ async function downloadAndDestroy(storagePath, dropId, fileName, contentType = "
     }
 
     // Descifrar el archivo
-    showToast("Descifrando archivo…", "info");
     console.log(`🔐 Iniciando descifrado: ${fileName}`);
+    
+    // Mostrar progreso durante descifrado
+    if (storage === "b2" && progressEl && progressWrap) {
+      progressEl.style.width = '95%';
+      progressEl.textContent = 'Descifrando...';
+      if (progressLabel) {
+        progressLabel.textContent = 'Descifrando archivo descargado...';
+      }
+    }
+    showToast("Descifrando archivo…", "info");
     
     let decryptedBlob;
     try {
       const decryptStart = Date.now();
+      
+      // Simular progreso durante descifrado para archivos grandes
+      let decryptProgress = 95;
+      const decryptTimer = setInterval(() => {
+        if (storage === "b2" && progressEl && data.size > 10 * 1024 * 1024) { // Solo para archivos >10MB
+          decryptProgress = Math.min(99, decryptProgress + 1);
+          progressEl.style.width = `${decryptProgress}%`;
+          if (progressLabel) {
+            progressLabel.textContent = `Descifrando... ${decryptProgress}%`;
+          }
+        }
+      }, 500);
+      
       decryptedBlob = await decryptFile(data, roomId, contentType);
+      clearInterval(decryptTimer);
+      
       const decryptTime = ((Date.now() - decryptStart) / 1000).toFixed(1);
       console.log(`✅ Descifrado completado en ${decryptTime}s`);
     } catch (err) {
+      if (typeof decryptTimer !== 'undefined') clearInterval(decryptTimer);
       showToast(`Error descifrando: ${err.message}`, "error");
       return;
     }
 
     // Crear URL y descargar
+    if (storage === "b2" && progressEl) {
+      progressEl.style.width = '100%';
+      progressEl.textContent = 'Completado';
+      if (progressLabel) {
+        progressLabel.textContent = 'Preparando descarga del archivo...';
+      }
+    }
     showToast("Preparando descarga…", "info");
     const url = URL.createObjectURL(decryptedBlob);
     const a = document.createElement("a");

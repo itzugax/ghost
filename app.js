@@ -1639,11 +1639,10 @@ async function downloadAndDestroy(storagePath, dropId, fileName, contentType = "
         
         // Actualizar label con información detallada
         if (progressLabel) {
-          if (total && speed) {
-            const remaining = (total - loaded) / speed;
-            progressLabel.textContent = `${formatBytes(loaded)} de ${formatBytes(total)} - ${formatSpeed(speed)} - ${formatTime(remaining)} restante`;
+          if (total) {
+            progressLabel.textContent = `${formatBytes(loaded)} de ${formatBytes(total)}`;
           } else {
-            progressLabel.textContent = `Descargado: ${formatBytes(loaded)} - ${formatSpeed(speed || 0)}`;
+            progressLabel.textContent = `Descargado: ${formatBytes(loaded)}`;
           }
         }
         

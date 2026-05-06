@@ -6,6 +6,10 @@
       "use": "@vercel/node"
     },
     {
+      "src": "supabase-config.js",
+      "use": "@vercel/static"
+    },
+    {
       "src": "app.js",
       "use": "@vercel/static"
     },

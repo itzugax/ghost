@@ -310,33 +310,37 @@ class I18n {
     this.updateUI();
   }
   
-  t(key, params = {}) {
-    let text = translations[this.currentLang][key] || translations['en'][key] || key;
+  t(key, params) {
+    params = params || {};
+    var text = translations[this.currentLang][key] || translations['en'][key] || key;
     
-    // Reemplazar parámetros {param}
-    Object.keys(params).forEach(param => {
-      text = text.replace(new RegExp(`\\{${param}\\}`, 'g'), params[param]);
-    });
+    // Reemplazar parámetros {param} de forma simple
+    for (var param in params) {
+      if (params.hasOwnProperty(param)) {
+        var regex = new RegExp('\\{' + param + '\\}', 'g');
+        text = text.replace(regex, params[param]);
+      }
+    }
     
     return text;
   }
   
   updateUI() {
-    // Actualizar todos los elementos con data-i18n
-    document.querySelectorAll('[data-i18n]').forEach(el => {
-      const key = el.dataset.i18n;
-      const text = this.t(key);
+    // Actualizar todos los elementos con data-i18n usando for loop clásico
+    var elements = document.querySelectorAll('[data-i18n]');
+    for (var i = 0; i < elements.length; i++) {
+      var el = elements[i];
+      var key = el.getAttribute('data-i18n');
+      var text = this.t(key);
       
       if (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA') {
         el.placeholder = text;
-      } else if (el.dataset.i18nHtml) {
+      } else if (el.hasAttribute('data-i18n-html')) {
         el.innerHTML = text;
       } else {
         el.textContent = text;
       }
-    });
-    
-    // NO inicializar el botón aquí - se hace externamente
+    }
   }
   
   toggleLanguage() {
@@ -348,113 +352,57 @@ class I18n {
 // Instancia global
 window.i18n = new I18n();
 
-// Función para inicializar el botón de idioma de forma robusta
-function initLanguageButtonRobust() {
+// Función simple y robusta para el botón de idioma
+function initLanguageButton() {
   const langBtn = document.getElementById('lang-btn');
   if (!langBtn) {
-    console.log('🌐 Botón de idioma no encontrado, reintentando...');
-    setTimeout(initLanguageButtonRobust, 200);
+    setTimeout(initLanguageButton, 200);
     return;
   }
   
-  // Verificar si ya tiene el evento (evitar duplicados)
-  if (langBtn.dataset.i18nInitialized === 'true') {
-    console.log('🌐 Botón de idioma ya inicializado');
+  // Evitar duplicados
+  if (langBtn.hasAttribute('data-initialized')) {
     return;
   }
-  
-  // Marcar como inicializado
-  langBtn.dataset.i18nInitialized = 'true';
+  langBtn.setAttribute('data-initialized', 'true');
   
   // Actualizar texto inicial
   langBtn.textContent = window.i18n.currentLang === 'es' ? 'EN' : 'ES';
-  langBtn.title = window.i18n.currentLang === 'es' ? 'Switch to English' : 'Cambiar a Español';
   
-  // Remover cualquier evento anterior (por si acaso)
-  langBtn.onclick = null;
-  
-  // Agregar evento con onclick directo (más confiable)
-  langBtn.onclick = function(e) {
-    try {
-      e.preventDefault();
-      e.stopPropagation();
-      
-      console.log('🌐 Click en botón de idioma:', window.i18n.currentLang);
-      
-      // Cambiar idioma - DEFINIR newLang correctamente
-      const currentLang = window.i18n.currentLang;
-      const newLang = currentLang === 'es' ? 'en' : 'es';
-      
-      console.log('🌐 Cambiando de', currentLang, 'a', newLang);
-      
-      // Actualizar el idioma en la instancia
-      window.i18n.currentLang = newLang;
-      localStorage.setItem('ghostdrop-lang', newLang);
-      document.documentElement.lang = newLang;
-      
-      // Actualizar botón inmediatamente
-      this.textContent = newLang === 'es' ? 'EN' : 'ES';
-      this.title = newLang === 'es' ? 'Switch to English' : 'Cambiar a Español';
-      
-      console.log('🌐 Idioma cambiado a:', newLang);
-      
-      // FORZAR actualización completa de la UI
-      console.log('🌐 Actualizando UI...');
-      window.i18n.updateUI();
-      
-      // Doble verificación: actualizar elementos específicos
-      setTimeout(function() {
-        console.log('🌐 Ejecutando doble verificación...');
-        document.querySelectorAll('[data-i18n]').forEach(function(el) {
-          const key = el.dataset.i18n;
-          const text = window.i18n.t(key);
-          
-          if (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA') {
-            el.placeholder = text;
-          } else if (el.dataset.i18nHtml) {
-            el.innerHTML = text;
-          } else {
-            el.textContent = text;
-          }
-        });
-        console.log('🌐 UI actualizada completamente');
-      }, 100);
-      
-    } catch (error) {
-      console.error('❌ Error en cambio de idioma:', error);
-    }
+  // Evento simple
+  langBtn.onclick = function() {
+    console.log('🌐 Click detectado');
+    
+    // Cambiar idioma
+    var currentLang = window.i18n.currentLang;
+    var newLang = currentLang === 'es' ? 'en' : 'es';
+    
+    console.log('🌐 Cambiando de ' + currentLang + ' a ' + newLang);
+    
+    // Actualizar
+    window.i18n.currentLang = newLang;
+    localStorage.setItem('ghostdrop-lang', newLang);
+    document.documentElement.lang = newLang;
+    
+    // Actualizar botón
+    langBtn.textContent = newLang === 'es' ? 'EN' : 'ES';
+    
+    // Actualizar UI
+    window.i18n.updateUI();
+    
+    console.log('🌐 Cambio completado');
   };
   
-  console.log('🌐 Botón de idioma inicializado correctamente en:', window.location.pathname);
+  console.log('🌐 Botón inicializado');
 }
 
-// Múltiples estrategias de inicialización para garantizar que funcione
-function initLanguageMultiple() {
-  console.log('🌐 Iniciando múltiples intentos de inicialización...');
-  
-  // Intento 1: Inmediato
-  initLanguageButtonRobust();
-  
-  // Intento 2: Después de 100ms
-  setTimeout(initLanguageButtonRobust, 100);
-  
-  // Intento 3: Después de 500ms
-  setTimeout(initLanguageButtonRobust, 500);
-  
-  // Intento 4: Después de 1 segundo
-  setTimeout(initLanguageButtonRobust, 1000);
-}
-
-// Inicializar según el estado del DOM
+// Inicializar múltiples veces para asegurar que funcione
 if (document.readyState === 'loading') {
-  document.addEventListener('DOMContentLoaded', initLanguageMultiple);
+  document.addEventListener('DOMContentLoaded', initLanguageButton);
 } else {
-  // DOM ya está listo
-  initLanguageMultiple();
+  initLanguageButton();
 }
 
-// También escuchar cuando la página se muestra (para navegación back/forward)
-window.addEventListener('pageshow', initLanguageMultiple);
-
-// Y cuando el window se carga completamente
-window.addEventListener('load', initLanguageMultiple);
+setTimeout(initLanguageButton, 100);
+setTimeout(initLanguageButton, 500);
+setTimeout(initLanguageButton, 1000);

@@ -180,11 +180,28 @@ function showImagePreview(url, name) {
 // serverNow() = Date.now() + offset calibrado contra el servidor.
 
 function getSecsLeft(expiresAt) {
-  return Math.max(0, Math.floor((new Date(expiresAt).getTime() - serverNow()) / 1000));
+  const now = serverNow();
+  const expires = new Date(expiresAt).getTime();
+  const diff = Math.max(0, Math.floor((expires - now) / 1000));
+  
+  // Debug en desarrollo
+  if (window.location.hostname === 'localhost') {
+    console.log(`⏰ Timer debug - Expires: ${new Date(expiresAt).toLocaleTimeString()}, Now: ${new Date(now).toLocaleTimeString()}, Remaining: ${diff}s`);
+  }
+  
+  return diff;
 }
 
 function serverNow() {
-  return Date.now() + (window.serverTimeOffset || 0);
+  const offset = window.serverTimeOffset || 0;
+  const now = Date.now() + offset;
+  
+  // Debug en desarrollo
+  if (window.location.hostname === 'localhost' && Math.abs(offset) > 1000) {
+    console.warn(`⚠️ Gran diferencia de tiempo con servidor: ${offset}ms`);
+  }
+  
+  return now;
 }
 
 // ─── Contador global ──────────────────────────────────────
@@ -731,24 +748,73 @@ document.querySelectorAll(".ttl-btn").forEach(btn => {
 
 async function calibrateServerTime() {
   try {
-    // 3 pings para mayor precisión — usamos la mediana
-    const samples = [];
-    for (let i = 0; i < 3; i++) {
-      const t0 = Date.now();
-      const { data, error } = await db.rpc("get_server_time").single();
-      const t1 = Date.now();
-      if (!error && data) {
-        const latency  = (t1 - t0) / 2;
-        const serverMs = new Date(data).getTime();
-        samples.push(serverMs - (t0 + latency));
+    console.log('🕐 Calibrando tiempo del servidor...');
+    
+    // Método 1: Intentar función RPC personalizada
+    try {
+      const samples = [];
+      for (let i = 0; i < 3; i++) {
+        const t0 = Date.now();
+        const { data, error } = await db.rpc("get_server_time").single();
+        const t1 = Date.now();
+        if (!error && data) {
+          const latency = (t1 - t0) / 2;
+          const serverMs = new Date(data).getTime();
+          samples.push(serverMs - (t0 + latency));
+        }
       }
+      if (samples.length) {
+        samples.sort((a, b) => a - b);
+        window.serverTimeOffset = samples[Math.floor(samples.length / 2)];
+        console.log(`✅ Tiempo calibrado (RPC): ${window.serverTimeOffset}ms`);
+        return;
+      }
+    } catch (rpcError) {
+      console.log('⚠️ RPC get_server_time no disponible, usando método alternativo');
     }
-    if (samples.length) {
-      samples.sort((a, b) => a - b);
-      window.serverTimeOffset = samples[Math.floor(samples.length / 2)];
-      console.log(`Server offset: ${window.serverTimeOffset}ms`);
+    
+    // Método 2: Usar timestamp de una consulta simple
+    try {
+      const samples = [];
+      for (let i = 0; i < 3; i++) {
+        const t0 = Date.now();
+        const { data, error } = await db
+          .from('rooms')
+          .select('created_at')
+          .limit(1)
+          .order('created_at', { ascending: false });
+        const t1 = Date.now();
+        
+        if (!error && data && data.length > 0) {
+          const latency = (t1 - t0) / 2;
+          // Asumir que el registro más reciente fue creado "ahora"
+          const serverMs = new Date(data[0].created_at).getTime();
+          const clientTime = t0 + latency;
+          
+          // Solo usar si la diferencia es razonable (menos de 1 hora)
+          const diff = Math.abs(serverMs - clientTime);
+          if (diff < 3600000) {
+            samples.push(serverMs - clientTime);
+          }
+        }
+      }
+      
+      if (samples.length) {
+        samples.sort((a, b) => a - b);
+        window.serverTimeOffset = samples[Math.floor(samples.length / 2)];
+        console.log(`✅ Tiempo calibrado (DB): ${window.serverTimeOffset}ms`);
+        return;
+      }
+    } catch (dbError) {
+      console.warn('⚠️ No se pudo calibrar con DB:', dbError.message);
     }
-  } catch {
+    
+    // Método 3: Sin calibración (usar tiempo local)
+    window.serverTimeOffset = 0;
+    console.log('⚠️ Usando tiempo local (sin calibración)');
+    
+  } catch (error) {
+    console.error('❌ Error calibrando tiempo:', error);
     window.serverTimeOffset = 0;
   }
 }
@@ -1038,13 +1104,27 @@ async function loadThumbnail(f, li) {
 }
 
 function startFileTimer(fileId, secs, totalSecs) {
-  if (fileTimers[fileId]) { clearInterval(fileTimers[fileId]); delete fileTimers[fileId]; }
-  if (secs <= 0) return;
+  // Limpiar timer existente
+  if (fileTimers[fileId]) { 
+    clearInterval(fileTimers[fileId]); 
+    delete fileTimers[fileId]; 
+  }
+  
+  if (secs <= 0) {
+    console.log(`⏰ Timer ${fileId}: Ya expirado (${secs}s)`);
+    return;
+  }
+  
   const total = totalSecs ?? secs;
   let remaining = secs;
+  
+  console.log(`⏰ Iniciando timer ${fileId}: ${remaining}s de ${total}s`);
 
   const el = document.getElementById(`t-${fileId}`);
-  if (el) { el.textContent = formatCountdown(remaining); updateTimerColor(el, remaining, total); }
+  if (el) { 
+    el.textContent = formatCountdown(remaining); 
+    updateTimerColor(el, remaining, total); 
+  }
 
   // Barra inicial sincronizada con el porcentaje real
   const bar = document.getElementById(`bar-${fileId}`);
@@ -1061,21 +1141,35 @@ function startFileTimer(fileId, secs, totalSecs) {
   // rAF para actualizar la barra a 60fps
   const startTime = performance.now();
   const startRemaining = remaining;
+  let rafId = null;
 
   function rafBar() {
     const b = document.getElementById(`bar-${fileId}`);
-    if (!b) return;
+    if (!b) {
+      if (rafId) cancelAnimationFrame(rafId);
+      return;
+    }
     const elapsed = (performance.now() - startTime) / 1000;
     const current = Math.max(0, startRemaining - elapsed);
     b.style.width = Math.max(0, (current / total) * 100) + "%";
-    if (current > 0) requestAnimationFrame(rafBar);
+    if (current > 0) {
+      rafId = requestAnimationFrame(rafBar);
+    }
   }
-  requestAnimationFrame(rafBar);
+  rafId = requestAnimationFrame(rafBar);
 
+  // Timer principal que actualiza cada segundo
   fileTimers[fileId] = setInterval(() => {
     remaining--;
     const el = document.getElementById(`t-${fileId}`);
-    if (!el) { clearInterval(fileTimers[fileId]); delete fileTimers[fileId]; return; }
+    if (!el) { 
+      console.log(`⏰ Timer ${fileId}: Elemento no encontrado, limpiando`);
+      clearInterval(fileTimers[fileId]); 
+      delete fileTimers[fileId]; 
+      if (rafId) cancelAnimationFrame(rafId);
+      return; 
+    }
+    
     updateTimerColor(el, remaining, total);
 
     // Parpadeo en los últimos 10 segundos
@@ -1085,8 +1179,10 @@ function startFileTimer(fileId, secs, totalSecs) {
 
     if (remaining <= 0) {
       // Muerte instantánea — dispara animación sin mostrar 00:00
+      console.log(`⏰ Timer ${fileId}: Expirado, animando salida`);
       clearInterval(fileTimers[fileId]);
       delete fileTimers[fileId];
+      if (rafId) cancelAnimationFrame(rafId);
       animateExpire(fileId, "normal");
     } else {
       el.textContent = formatCountdown(remaining);

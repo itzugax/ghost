@@ -1,10 +1,27 @@
 /**
  * Cliente de Backblaze B2 para el navegador
- * Se comunica con el servidor proxy local
+ * Se comunica con el servidor proxy local o Vercel serverless
  */
 
-// URL del servidor proxy (en producción usa Vercel serverless routes)
-const PROXY_URL = window.location.origin;
+// URL del servidor proxy - detectar automáticamente el entorno
+const PROXY_URL = (() => {
+  if (typeof window !== 'undefined') {
+    // En el navegador
+    const origin = window.location.origin;
+    const isDev = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+    
+    if (isDev) {
+      // En desarrollo, intentar proxy local primero
+      return 'http://localhost:3001';
+    } else {
+      // En producción, usar las rutas de Vercel
+      return origin;
+    }
+  }
+  return 'http://localhost:3001'; // Fallback
+})();
+
+console.log('🔧 B2 Proxy URL:', PROXY_URL);
 
 /**
  * Sube archivo a Backblaze B2 a través del proxy con progreso
@@ -23,9 +40,18 @@ const PROXY_URL = window.location.origin;
 export async function uploadToB2(blob, fileName, onProgress = null) {
   return new Promise(async (resolve, reject) => {
     try {
-      // 1. Obtener URL firmada del proxy
+      console.log(`📤 Iniciando subida B2: ${fileName} (${(blob.size / 1024 / 1024).toFixed(2)} MB)`);
+      
+      // 1. Verificar que el proxy esté disponible
+      const isB2Available = await testB2Connection();
+      if (!isB2Available) {
+        throw new Error('Servidor B2 no disponible. Intenta con un archivo más pequeño (<50MB)');
+      }
+      
+      // 2. Obtener URL firmada del proxy
       const key = `${Date.now()}_${Math.random().toString(36).slice(2)}_${fileName.replace(/[^A-Za-z0-9._-]/g, '_')}`;
       
+      console.log('🔑 Obteniendo URL firmada...');
       const urlResponse = await fetch(`${PROXY_URL}/get-upload-url`, {
         method: 'POST',
         headers: { 
@@ -39,8 +65,14 @@ export async function uploadToB2(blob, fileName, onProgress = null) {
       });
       
       if (!urlResponse.ok) {
-        const errorData = await urlResponse.json().catch(() => ({}));
-        throw new Error(errorData.error || `HTTP ${urlResponse.status}: No se pudo obtener URL de subida`);
+        const errorText = await urlResponse.text();
+        let errorData;
+        try {
+          errorData = JSON.parse(errorText);
+        } catch {
+          errorData = { error: `HTTP ${urlResponse.status}: ${errorText}` };
+        }
+        throw new Error(errorData.error || `No se pudo obtener URL de subida: HTTP ${urlResponse.status}`);
       }
       
       const { uploadUrl } = await urlResponse.json();
@@ -49,7 +81,9 @@ export async function uploadToB2(blob, fileName, onProgress = null) {
         throw new Error('URL de subida no recibida del servidor');
       }
       
-      // 2. Subir DIRECTAMENTE a B2 con progreso real
+      console.log('✅ URL firmada obtenida, iniciando subida directa a B2...');
+      
+      // 3. Subir DIRECTAMENTE a B2 con progreso real
       const xhr = new XMLHttpRequest();
       xhr.open('PUT', uploadUrl);
       xhr.setRequestHeader('Content-Type', blob.type || 'application/octet-stream');
@@ -86,38 +120,49 @@ export async function uploadToB2(blob, fileName, onProgress = null) {
       
       xhr.addEventListener('load', () => {
         if (xhr.status >= 200 && xhr.status < 300) {
+          console.log('✅ Subida a B2 completada exitosamente');
           resolve({ key, size: blob.size });
         } else {
           let errorMsg = `HTTP ${xhr.status}: ${xhr.statusText}`;
           if (xhr.status === 413) {
-            errorMsg = "Archivo demasiado grande para el servidor";
+            errorMsg = "Archivo demasiado grande para el servidor B2";
           } else if (xhr.status === 403) {
-            errorMsg = "Acceso denegado al servidor de archivos";
+            errorMsg = "Acceso denegado al servidor B2. Verificar credenciales";
           } else if (xhr.status === 500) {
-            errorMsg = "Error interno del servidor de archivos";
+            errorMsg = "Error interno del servidor B2";
+          } else if (xhr.status === 0) {
+            errorMsg = "Error de red - no se pudo conectar a B2";
           }
+          console.error('❌ Error en subida B2:', errorMsg);
           reject(new Error(errorMsg));
         }
       });
       
       xhr.addEventListener('error', () => {
-        reject(new Error('Error de red al subir a B2'));
+        const errorMsg = 'Error de red al subir a B2. Verificar conexión';
+        console.error('❌', errorMsg);
+        reject(new Error(errorMsg));
       });
       
       xhr.addEventListener('abort', () => {
-        reject(new Error('Subida cancelada'));
+        const errorMsg = 'Subida cancelada por el usuario';
+        console.warn('⚠️', errorMsg);
+        reject(new Error(errorMsg));
       });
       
       xhr.addEventListener('timeout', () => {
-        reject(new Error('Tiempo de espera agotado'));
+        const errorMsg = 'Tiempo de espera agotado. Archivo muy grande o conexión lenta';
+        console.error('⏰', errorMsg);
+        reject(new Error(errorMsg));
       });
       
-      // Timeout de 10 minutos para archivos grandes
-      xhr.timeout = 10 * 60 * 1000;
+      // Timeout de 15 minutos para archivos muy grandes
+      xhr.timeout = 15 * 60 * 1000;
       
       xhr.send(blob);
       
     } catch (error) {
+      console.error('❌ Error en uploadToB2:', error);
       reject(error);
     }
   });
@@ -177,20 +222,43 @@ export async function deleteFromB2(key) {
 }
 
 /**
- * Verifica si el proxy está disponible
+ * Verifica si el proxy B2 está disponible
  * @returns {Promise<boolean>}
  */
 export async function testB2Connection() {
   try {
-    const response = await fetch(`${PROXY_URL}/health`);
+    console.log('🔍 Verificando conexión B2...');
     
-    if (!response.ok) {
-      return false;
+    // Intentar diferentes URLs
+    const urls = [
+      `${PROXY_URL}/health`,
+      `${window.location.origin}/health`,
+      'http://localhost:3001/health'
+    ];
+    
+    for (const url of urls) {
+      try {
+        const response = await fetch(url, { 
+          method: 'GET',
+          timeout: 3000 
+        });
+        
+        if (response.ok) {
+          const data = await response.json();
+          if (data.status === 'ok') {
+            console.log('✅ B2 Proxy disponible en:', url);
+            return true;
+          }
+        }
+      } catch (e) {
+        console.log('❌ B2 Proxy no disponible en:', url);
+      }
     }
     
-    const data = await response.json();
-    return data.status === 'ok';
+    console.warn('⚠️ B2 Proxy no disponible - archivos >50MB no funcionarán');
+    return false;
   } catch (error) {
+    console.error('❌ Error verificando B2:', error);
     return false;
   }
 }

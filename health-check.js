@@ -84,26 +84,52 @@ class HealthChecker {
 
   async checkB2Proxy() {
     try {
-      const response = await fetch('/health', { 
-        method: 'GET',
-        timeout: 5000 
-      });
+      console.log('🔍 Verificando proxy B2...');
       
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status}`);
-      }
-
-      const data = await response.json();
+      // Intentar diferentes endpoints
+      const endpoints = [
+        '/health',
+        '/api/health', 
+        'http://localhost:3001/health'
+      ];
       
-      if (data.status !== 'ok') {
-        throw new Error('Proxy responde pero no está OK');
+      let proxyWorking = false;
+      let workingEndpoint = null;
+      
+      for (const endpoint of endpoints) {
+        try {
+          const response = await fetch(endpoint, { 
+            method: 'GET',
+            timeout: 5000 
+          });
+          
+          if (response.ok) {
+            const data = await response.json();
+            
+            if (data.status === 'ok') {
+              proxyWorking = true;
+              workingEndpoint = endpoint;
+              console.log(`✅ B2 Proxy funcionando en: ${endpoint}`);
+              break;
+            }
+          }
+        } catch (e) {
+          console.log(`❌ B2 Proxy no disponible en: ${endpoint}`);
+        }
       }
-
-      this.results.b2Proxy = { 
-        status: 'ok', 
-        message: `Proxy B2 funcionando (bucket: ${data.bucket})` 
-      };
-      console.log('✅ B2 Proxy: OK');
+      
+      if (proxyWorking) {
+        this.results.b2Proxy = { 
+          status: 'ok', 
+          message: `Proxy B2 funcionando (${workingEndpoint})` 
+        };
+      } else {
+        this.results.b2Proxy = { 
+          status: 'warning', 
+          message: 'Proxy B2 no disponible - solo archivos <50MB funcionarán' 
+        };
+      }
+      
     } catch (error) {
       this.results.b2Proxy = { 
         status: 'warning', 

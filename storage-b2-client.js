@@ -174,6 +174,9 @@ export async function uploadToB2(blob, fileName, onProgress = null) {
  */
 export async function downloadFromB2(key) {
   try {
+    console.log(`📥 Descargando de B2: ${key}`);
+    
+    // Mostrar progreso de descarga
     const response = await fetch(`${PROXY_URL}/download/${encodeURIComponent(key)}`);
     
     if (!response.ok) {
@@ -188,11 +191,55 @@ export async function downloadFromB2(key) {
       throw new Error(errorMsg);
     }
     
-    const blob = await response.blob();
+    // Obtener el tamaño del archivo si está disponible
+    const contentLength = response.headers.get('content-length');
+    const total = contentLength ? parseInt(contentLength, 10) : 0;
+    
+    if (!response.body) {
+      throw new Error('No se pudo obtener el stream de descarga');
+    }
+    
+    // Leer el stream con progreso
+    const reader = response.body.getReader();
+    const chunks = [];
+    let loaded = 0;
+    
+    console.log(`📊 Descargando archivo de ${total ? formatBytes(total) : 'tamaño desconocido'}...`);
+    
+    while (true) {
+      const { done, value } = await reader.read();
+      
+      if (done) break;
+      
+      chunks.push(value);
+      loaded += value.length;
+      
+      // Mostrar progreso cada 1MB descargado
+      if (total && loaded % (1024 * 1024) === 0) {
+        const percent = Math.round((loaded / total) * 100);
+        console.log(`📥 Descargado: ${formatBytes(loaded)} / ${formatBytes(total)} (${percent}%)`);
+      }
+    }
+    
+    console.log(`✅ Descarga B2 completada: ${formatBytes(loaded)}`);
+    
+    // Combinar todos los chunks en un blob
+    const blob = new Blob(chunks);
     return blob;
+    
   } catch (error) {
+    console.error('❌ Error descargando de B2:', error);
     throw new Error(`No se pudo descargar el archivo de Backblaze B2: ${error.message}`);
   }
+}
+
+// Helper function para formatear bytes (si no existe)
+function formatBytes(bytes) {
+  if (bytes === 0) return '0 B';
+  const k = 1024;
+  const sizes = ['B', 'KB', 'MB', 'GB'];
+  const i = Math.floor(Math.log(bytes) / Math.log(k));
+  return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
 }
 
 /**

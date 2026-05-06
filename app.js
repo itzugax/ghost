@@ -1582,16 +1582,25 @@ async function sendText() {
 // ─── Download ──────────────────────────────────────────────
 
 async function downloadAndDestroy(storagePath, dropId, fileName, contentType = "application/octet-stream", burnAfterReading = false, storage = "supabase", b2Key = null) {
-  showToast("Descargando…", "info");
-
+  const startTime = Date.now();
+  
   try {
     let data;
     
     if (storage === "b2") {
-      // Descargar de Backblaze B2
+      // Descargar de Backblaze B2 con progreso mejorado
+      showToast(`Descargando de B2: ${fileName}`, "info");
+      console.log(`📥 Iniciando descarga B2: ${fileName}`);
+      
       data = await downloadFromB2(b2Key || storagePath);
+      
+      const downloadTime = ((Date.now() - startTime) / 1000).toFixed(1);
+      console.log(`✅ Descarga B2 completada en ${downloadTime}s`);
+      
     } else {
-      // Descargar de Supabase
+      // Descargar de Supabase (más rápido)
+      showToast(`Descargando: ${fileName}`, "info");
+      
       const { data: supabaseData, error } = await db.storage
         .from("ghost-drop")
         .download(storagePath);
@@ -1604,16 +1613,22 @@ async function downloadAndDestroy(storagePath, dropId, fileName, contentType = "
     }
 
     // Descifrar el archivo
-    showToast("Descifrando…", "info");
+    showToast("Descifrando archivo…", "info");
+    console.log(`🔐 Iniciando descifrado: ${fileName}`);
+    
     let decryptedBlob;
     try {
+      const decryptStart = Date.now();
       decryptedBlob = await decryptFile(data, roomId, contentType);
+      const decryptTime = ((Date.now() - decryptStart) / 1000).toFixed(1);
+      console.log(`✅ Descifrado completado en ${decryptTime}s`);
     } catch (err) {
       showToast(`Error descifrando: ${err.message}`, "error");
       return;
     }
 
     // Crear URL y descargar
+    showToast("Preparando descarga…", "info");
     const url = URL.createObjectURL(decryptedBlob);
     const a = document.createElement("a");
     a.href = url;
@@ -1623,11 +1638,15 @@ async function downloadAndDestroy(storagePath, dropId, fileName, contentType = "
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
 
+    const totalTime = ((Date.now() - startTime) / 1000).toFixed(1);
+    console.log(`🎉 Descarga completa en ${totalTime}s total`);
+
     haptic([10, 50, 10]);
     recordDownload(fileName, roomId);
     
     // Si es burn after reading, borrar inmediatamente
     if (burnAfterReading) {
+      showToast("Eliminando archivo (burn after reading)…", "info");
       burnedDropIds.add(dropId);
       const { error: delErr } = await db.from("drops").delete().eq("id", dropId);
       
@@ -1652,13 +1671,14 @@ async function downloadAndDestroy(storagePath, dropId, fileName, contentType = "
       clearInterval(fileTimers[dropId]);
       delete fileTimers[dropId];
       animateExpire(dropId, "burn");
-      showToast("Descargado y borrado ✓", "success");
+      showToast("Descargado y eliminado ✓", "success");
     } else {
-      showToast("Descarga completada ✓", "success");
+      showToast(`Descarga completada: ${fileName} ✓`, "success");
     }
 
   } catch (e) {
-    showToast(`Error: ${e.message}`, "error");
+    console.error('❌ Error en descarga:', e);
+    showToast(`Error descargando: ${e.message}`, "error");
   }
 }
 

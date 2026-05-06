@@ -285,7 +285,6 @@ const translations = {
 class I18n {
   constructor() {
     this.currentLang = this.detectLanguage();
-    this.buttonInitialized = false;
     this.loadLanguage(this.currentLang);
   }
   
@@ -337,46 +336,7 @@ class I18n {
       }
     });
     
-    // Inicializar botón de idioma solo una vez
-    if (!this.buttonInitialized) {
-      this.initLanguageButton();
-    } else {
-      // Solo actualizar texto si ya está inicializado
-      this.updateLanguageButtonText();
-    }
-  }
-  
-  updateLanguageButtonText() {
-    const langBtn = document.getElementById('lang-btn');
-    if (langBtn) {
-      langBtn.textContent = this.currentLang === 'es' ? 'EN' : 'ES';
-      langBtn.title = this.currentLang === 'es' ? 'Switch to English' : 'Cambiar a Español';
-    }
-  }
-  
-  initLanguageButton() {
-    const langBtn = document.getElementById('lang-btn');
-    if (!langBtn) {
-      // Reintentar en 100ms si no existe
-      setTimeout(() => this.initLanguageButton(), 100);
-      return;
-    }
-    
-    // Marcar como inicializado para evitar duplicados
-    this.buttonInitialized = true;
-    
-    // Actualizar texto
-    this.updateLanguageButtonText();
-    
-    // Agregar evento UNA SOLA VEZ
-    langBtn.addEventListener('click', (e) => {
-      e.preventDefault();
-      e.stopPropagation();
-      console.log('🌐 Cambiando idioma:', this.currentLang, '→', this.currentLang === 'es' ? 'en' : 'es');
-      this.toggleLanguage();
-    });
-    
-    console.log('🌐 Botón de idioma inicializado correctamente');
+    // NO inicializar el botón aquí - se hace externamente
   }
   
   toggleLanguage() {
@@ -388,10 +348,56 @@ class I18n {
 // Instancia global
 window.i18n = new I18n();
 
-// Inicialización única cuando el DOM esté listo
-document.addEventListener('DOMContentLoaded', () => {
-  console.log('🌐 DOM listo, inicializando botón de idioma...');
-  if (!window.i18n.buttonInitialized) {
-    window.i18n.initLanguageButton();
+// Función para inicializar el botón de idioma de forma robusta
+function initLanguageButtonRobust() {
+  const langBtn = document.getElementById('lang-btn');
+  if (!langBtn) {
+    console.log('🌐 Botón de idioma no encontrado, reintentando...');
+    setTimeout(initLanguageButtonRobust, 200);
+    return;
   }
-});
+  
+  // Verificar si ya tiene el evento (evitar duplicados)
+  if (langBtn.dataset.i18nInitialized === 'true') {
+    console.log('🌐 Botón de idioma ya inicializado');
+    return;
+  }
+  
+  // Marcar como inicializado
+  langBtn.dataset.i18nInitialized = 'true';
+  
+  // Actualizar texto inicial
+  langBtn.textContent = window.i18n.currentLang === 'es' ? 'EN' : 'ES';
+  langBtn.title = window.i18n.currentLang === 'es' ? 'Switch to English' : 'Cambiar a Español';
+  
+  // Agregar evento
+  langBtn.addEventListener('click', function(e) {
+    e.preventDefault();
+    e.stopPropagation();
+    
+    console.log('🌐 Click en botón de idioma:', window.i18n.currentLang);
+    
+    // Cambiar idioma
+    const newLang = window.i18n.currentLang === 'es' ? 'en' : 'es';
+    window.i18n.loadLanguage(newLang);
+    
+    // Actualizar botón inmediatamente
+    langBtn.textContent = newLang === 'es' ? 'EN' : 'ES';
+    langBtn.title = newLang === 'es' ? 'Switch to English' : 'Cambiar a Español';
+    
+    console.log('🌐 Idioma cambiado a:', newLang);
+  });
+  
+  console.log('🌐 Botón de idioma inicializado correctamente');
+}
+
+// Inicializar cuando el DOM esté listo
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', initLanguageButtonRobust);
+} else {
+  // DOM ya está listo
+  initLanguageButtonRobust();
+}
+
+// También intentar después de un delay por si acaso
+setTimeout(initLanguageButtonRobust, 500);

@@ -1584,6 +1584,12 @@ async function sendText() {
 async function downloadAndDestroy(storagePath, dropId, fileName, contentType = "application/octet-stream", burnAfterReading = false, storage = "supabase", b2Key = null) {
   const startTime = Date.now();
   
+  // Definir elementos de progreso al inicio para que estén disponibles en todo el scope
+  const progressEl = document.getElementById('progress-bar');
+  const progressWrap = document.getElementById('progress-wrap');
+  const progressLabel = document.getElementById('progress-label');
+  let fallbackTimer = null;
+  
   try {
     let data;
     
@@ -1593,9 +1599,6 @@ async function downloadAndDestroy(storagePath, dropId, fileName, contentType = "
       console.log(`📥 Iniciando descarga B2: ${fileName}`);
       
       // Mostrar barra de progreso para archivos B2
-      const progressEl = document.getElementById('progress-bar');
-      const progressWrap = document.getElementById('progress-wrap');
-      const progressLabel = document.getElementById('progress-label');
       if (progressEl && progressWrap) {
         progressWrap.classList.remove('hidden');
         progressEl.style.width = '5%'; // Mostrar algo inmediatamente
@@ -1610,7 +1613,7 @@ async function downloadAndDestroy(storagePath, dropId, fileName, contentType = "
       
       // Fallback: actualizar progreso cada 2 segundos si no hay callbacks
       let fallbackProgress = 10;
-      const fallbackTimer = setInterval(() => {
+      fallbackTimer = setInterval(() => {
         if (progressEl && progressWrap && !progressWrap.classList.contains('hidden')) {
           fallbackProgress = Math.min(90, fallbackProgress + 10);
           progressEl.style.width = `${fallbackProgress}%`;
@@ -1650,16 +1653,11 @@ async function downloadAndDestroy(storagePath, dropId, fileName, contentType = "
         }
       });
       
-      // Ocultar barra de progreso
-      if (progressWrap) {
-        progressWrap.classList.add('hidden');
-      }
-      if (progressLabel) {
-        progressLabel.textContent = '';
-      }
-      
       // Limpiar fallback timer
-      clearInterval(fallbackTimer);
+      if (fallbackTimer) {
+        clearInterval(fallbackTimer);
+        fallbackTimer = null;
+      }
       
       const downloadTime = ((Date.now() - startTime) / 1000).toFixed(1);
       console.log(`✅ Descarga B2 completada en ${downloadTime}s`);
@@ -1693,12 +1691,13 @@ async function downloadAndDestroy(storagePath, dropId, fileName, contentType = "
     showToast("Descifrando archivo…", "info");
     
     let decryptedBlob;
+    let decryptTimer = null;
     try {
       const decryptStart = Date.now();
       
       // Simular progreso durante descifrado para archivos grandes
       let decryptProgress = 95;
-      const decryptTimer = setInterval(() => {
+      decryptTimer = setInterval(() => {
         if (storage === "b2" && progressEl && data.size > 10 * 1024 * 1024) { // Solo para archivos >10MB
           decryptProgress = Math.min(99, decryptProgress + 1);
           progressEl.style.width = `${decryptProgress}%`;
@@ -1709,12 +1708,15 @@ async function downloadAndDestroy(storagePath, dropId, fileName, contentType = "
       }, 500);
       
       decryptedBlob = await decryptFile(data, roomId, contentType);
-      clearInterval(decryptTimer);
+      if (decryptTimer) {
+        clearInterval(decryptTimer);
+        decryptTimer = null;
+      }
       
       const decryptTime = ((Date.now() - decryptStart) / 1000).toFixed(1);
       console.log(`✅ Descifrado completado en ${decryptTime}s`);
     } catch (err) {
-      if (typeof decryptTimer !== 'undefined') clearInterval(decryptTimer);
+      if (decryptTimer) clearInterval(decryptTimer);
       showToast(`Error descifrando: ${err.message}`, "error");
       return;
     }
@@ -1742,6 +1744,14 @@ async function downloadAndDestroy(storagePath, dropId, fileName, contentType = "
 
     haptic([10, 50, 10]);
     recordDownload(fileName, roomId);
+    
+    // Ocultar barra de progreso
+    if (progressWrap) {
+      progressWrap.classList.add('hidden');
+    }
+    if (progressLabel) {
+      progressLabel.textContent = '';
+    }
     
     // Si es burn after reading, borrar inmediatamente
     if (burnAfterReading) {
@@ -1776,9 +1786,10 @@ async function downloadAndDestroy(storagePath, dropId, fileName, contentType = "
     }
 
   } catch (e) {
+    // Limpiar timers en caso de error
+    if (fallbackTimer) clearInterval(fallbackTimer);
+    
     // Ocultar barra de progreso en caso de error
-    const progressWrap = document.getElementById('progress-wrap');
-    const progressLabel = document.getElementById('progress-label');
     if (progressWrap) {
       progressWrap.classList.add('hidden');
     }

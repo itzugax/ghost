@@ -352,42 +352,14 @@ class I18n {
 // Instancia global
 window.i18n = new I18n();
 
-// Función SÚPER SIMPLE para el botón
-function setupLanguageButton() {
-  var btn = document.getElementById('lang-btn');
-  if (!btn) return;
-  
-  btn.onclick = function() {
-    // Cambiar idioma
-    var newLang = window.i18n.currentLang === 'es' ? 'en' : 'es';
-    window.i18n.currentLang = newLang;
-    localStorage.setItem('ghostdrop-lang', newLang);
-    
-    // Actualizar botón
-    btn.textContent = newLang === 'es' ? 'EN' : 'ES';
-    
-    // Actualizar UI principal
-    window.i18n.updateUI();
-    
-    // CONECTAR con las funciones específicas de cada página
-    if (typeof updatePrivacyPage === 'function') {
-      updatePrivacyPage(); // privacy.html
+// BOTÓN SIMPLE - COMO FUNCIONABA ANTES
+document.addEventListener('DOMContentLoaded', function() {
+  setTimeout(function() {
+    var langBtn = document.getElementById('lang-btn');
+    if (langBtn) {
+      langBtn.addEventListener('click', function() {
+        window.i18n.toggleLanguage();
+      });
     }
-    if (typeof updateTermsPage === 'function') {
-      updateTermsPage(); // terms.html  
-    }
-    if (typeof applyTranslations === 'function') {
-      applyTranslations(newLang); // index.html
-    }
-    
-    console.log('🌐 Idioma cambiado a:', newLang);
-  };
-}
-
-// Intentar cada 500ms hasta que funcione
-setInterval(function() {
-  var btn = document.getElementById('lang-btn');
-  if (btn && !btn.onclick) {
-    setupLanguageButton();
-  }
-}, 500);
+  }, 100);
+});

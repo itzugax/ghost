@@ -31,18 +31,5 @@
       "src": "/delete/(.*)",
       "dest": "b2-proxy.js"
     }
-  ],
-  "env": {
-    "B2_KEY_ID": "@b2_key_id",
-    "B2_APPLICATION_KEY": "@b2_application_key",
-    "B2_BUCKET_ID": "@b2_bucket_id",
-    "B2_BUCKET_NAME": "@b2_bucket_name",
-    "B2_ENDPOINT": "@b2_endpoint",
-    "B2_PROXY_TOKEN": "@b2_proxy_token",
-    "B2_ALLOWED_ORIGINS": "@b2_allowed_origins",
-    "B2_MAX_UPLOAD_MB": "500",
-    "B2_RATE_LIMIT_WINDOW_MS": "60000",
-    "B2_RATE_LIMIT_MAX_REQUESTS": "120",
-    "B2_ALLOW_SETUP_CORS": "false"
-  }
+  ]
 }

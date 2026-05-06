@@ -1589,9 +1589,15 @@ async function subscribeToPresence() {
             online_at: new Date().toISOString(),
             typing: false,
           });
-          resolve(); // Resolver la promesa cuando esté listo
+          resolve();
         }
       });
+
+    // Timeout: resolve anyway after 5s to prevent hanging UI
+    setTimeout(() => {
+      console.warn("Presence subscribe timed out, proceeding anyway");
+      resolve();
+    }, 5000);
   });
 }
 

@@ -341,6 +341,11 @@ class I18n {
     if (langBtn) {
       langBtn.textContent = this.currentLang === 'es' ? 'EN' : 'ES';
       langBtn.title = this.currentLang === 'es' ? 'Switch to English' : 'Cambiar a Español';
+      // Agregar listener si no existe
+      if (!langBtn.dataset.listenerAdded) {
+        langBtn.addEventListener('click', () => this.toggleLanguage());
+        langBtn.dataset.listenerAdded = 'true';
+      }
     }
   }
   

@@ -310,29 +310,29 @@ app.delete('/delete/:key', async (req, res) => {
   }
 });
 
-// Iniciar servidor
-app.listen(PORT, () => {
-  console.log(`\n╔════════════════════════════════════════════════════════════╗`);
-  console.log(`║  🚀 Backblaze B2 Proxy Server                             ║`);
-  console.log(`╚════════════════════════════════════════════════════════════╝`);
-  console.log(`\n✅ Servidor corriendo en: http://localhost:${PORT}`);
-  console.log(`✅ Bucket: ${process.env.B2_BUCKET_NAME}`);
-  console.log(`✅ Endpoint: ${process.env.B2_ENDPOINT}`);
-  console.log(`✅ Max upload: ${MAX_UPLOAD_MB}MB`);
-  console.log(`✅ Rate limit: ${RATE_LIMIT_MAX_REQUESTS}/${RATE_LIMIT_WINDOW_MS}ms`);
-  console.log(`✅ Token auth: ${SERVER_TOKEN ? 'enabled' : 'disabled (dev mode)'}`);
-  if (IS_PRODUCTION) {
-    console.log(`✅ Allowed origins: ${allowedOrigins.length ? allowedOrigins.join(', ') : '(none configured)'}`);
-  }
-  console.log(`\n📝 Endpoints disponibles:`);
-  console.log(`   POST   /upload          - Subir archivo`);
-  console.log(`   GET    /download/:key   - Obtener URL de descarga`);
-  console.log(`   DELETE /delete/:key     - Borrar archivo`);
-  console.log(`   GET    /health          - Health check`);
-  console.log(`\n⏸️  Presiona Ctrl+C para detener\n`);
-});
+// Iniciar servidor solo en desarrollo (no en Vercel serverless)
+if (process.env.NODE_ENV !== 'production' && !process.env.VERCEL) {
+  app.listen(PORT, () => {
+    console.log(`\n╔════════════════════════════════════════════════════════════╗`);
+    console.log(`║  🚀 Backblaze B2 Proxy Server                             ║`);
+    console.log(`╚════════════════════════════════════════════════════════════╝`);
+    console.log(`\n✅ Servidor corriendo en: http://localhost:${PORT}`);
+    console.log(`✅ Bucket: ${process.env.B2_BUCKET_NAME}`);
+    console.log(`✅ Endpoint: ${process.env.B2_ENDPOINT}`);
+    console.log(`✅ Max upload: ${MAX_UPLOAD_MB}MB`);
+    console.log(`✅ Rate limit: ${RATE_LIMIT_MAX_REQUESTS}/${RATE_LIMIT_WINDOW_MS}ms`);
+    console.log(`✅ Token auth: ${SERVER_TOKEN ? 'enabled' : 'disabled (dev mode)'}`);
+    if (IS_PRODUCTION) {
+      console.log(`✅ Allowed origins: ${allowedOrigins.length ? allowedOrigins.join(', ') : '(none configured)'}`);
+    }
+    console.log(`\n📝 Endpoints disponibles:`);
+    console.log(`   POST   /upload          - Subir archivo`);
+    console.log(`   GET    /download/:key   - Obtener URL de descarga`);
+    console.log(`   DELETE /delete/:key     - Borrar archivo`);
+    console.log(`   GET    /health          - Health check`);
+    console.log(`\n⏸️  Presiona Ctrl+C para detener\n`);
+  });
+}
 
-// Manejo de errores
-process.on('unhandledRejection', (error) => {
-  console.error('❌ Error no manejado:', error);
-});
+// Exportar para Vercel serverless
+export default app;

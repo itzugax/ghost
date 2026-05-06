@@ -375,45 +375,54 @@ function initLanguageButtonRobust() {
   
   // Agregar evento con onclick directo (más confiable)
   langBtn.onclick = function(e) {
-    e.preventDefault();
-    e.stopPropagation();
-    
-    console.log('🌐 Click en botón de idioma:', window.i18n.currentLang);
-    
-    // Cambiar idioma
-    const newLang = window.i18n.currentLang === 'es' ? 'en' : 'es';
-    
-    // Actualizar el idioma en la instancia
-    window.i18n.currentLang = newLang;
-    localStorage.setItem('ghostdrop-lang', newLang);
-    document.documentElement.lang = newLang;
-    
-    // Actualizar botón inmediatamente
-    this.textContent = newLang === 'es' ? 'EN' : 'ES';
-    this.title = newLang === 'es' ? 'Switch to English' : 'Cambiar a Español';
-    
-    console.log('🌐 Idioma cambiado a:', newLang);
-    
-    // FORZAR actualización completa de la UI
-    console.log('🌐 Actualizando UI...');
-    window.i18n.updateUI();
-    
-    // Doble verificación: actualizar elementos específicos
-    setTimeout(() => {
-      document.querySelectorAll('[data-i18n]').forEach(el => {
-        const key = el.dataset.i18n;
-        const text = window.i18n.t(key);
-        
-        if (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA') {
-          el.placeholder = text;
-        } else if (el.dataset.i18nHtml) {
-          el.innerHTML = text;
-        } else {
-          el.textContent = text;
-        }
-      });
-      console.log('🌐 UI actualizada completamente');
-    }, 100);
+    try {
+      e.preventDefault();
+      e.stopPropagation();
+      
+      console.log('🌐 Click en botón de idioma:', window.i18n.currentLang);
+      
+      // Cambiar idioma - DEFINIR newLang correctamente
+      const currentLang = window.i18n.currentLang;
+      const newLang = currentLang === 'es' ? 'en' : 'es';
+      
+      console.log('🌐 Cambiando de', currentLang, 'a', newLang);
+      
+      // Actualizar el idioma en la instancia
+      window.i18n.currentLang = newLang;
+      localStorage.setItem('ghostdrop-lang', newLang);
+      document.documentElement.lang = newLang;
+      
+      // Actualizar botón inmediatamente
+      this.textContent = newLang === 'es' ? 'EN' : 'ES';
+      this.title = newLang === 'es' ? 'Switch to English' : 'Cambiar a Español';
+      
+      console.log('🌐 Idioma cambiado a:', newLang);
+      
+      // FORZAR actualización completa de la UI
+      console.log('🌐 Actualizando UI...');
+      window.i18n.updateUI();
+      
+      // Doble verificación: actualizar elementos específicos
+      setTimeout(function() {
+        console.log('🌐 Ejecutando doble verificación...');
+        document.querySelectorAll('[data-i18n]').forEach(function(el) {
+          const key = el.dataset.i18n;
+          const text = window.i18n.t(key);
+          
+          if (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA') {
+            el.placeholder = text;
+          } else if (el.dataset.i18nHtml) {
+            el.innerHTML = text;
+          } else {
+            el.textContent = text;
+          }
+        });
+        console.log('🌐 UI actualizada completamente');
+      }, 100);
+      
+    } catch (error) {
+      console.error('❌ Error en cambio de idioma:', error);
+    }
   };
   
   console.log('🌐 Botón de idioma inicializado correctamente en:', window.location.pathname);

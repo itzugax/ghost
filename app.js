@@ -1598,34 +1598,55 @@ async function downloadAndDestroy(storagePath, dropId, fileName, contentType = "
       const progressLabel = document.getElementById('progress-label');
       if (progressEl && progressWrap) {
         progressWrap.classList.remove('hidden');
-        progressEl.style.width = '0%';
+        progressEl.style.width = '5%'; // Mostrar algo inmediatamente
         progressEl.textContent = 'Conectando...';
         if (progressLabel) {
           progressLabel.textContent = 'Iniciando descarga desde Backblaze B2...';
         }
+        console.log('📊 Barra de progreso B2 inicializada');
+      } else {
+        console.warn('⚠️ No se encontraron elementos de progreso');
       }
       
+      // Fallback: actualizar progreso cada 2 segundos si no hay callbacks
+      let fallbackProgress = 10;
+      const fallbackTimer = setInterval(() => {
+        if (progressEl && progressWrap && !progressWrap.classList.contains('hidden')) {
+          fallbackProgress = Math.min(90, fallbackProgress + 10);
+          progressEl.style.width = `${fallbackProgress}%`;
+          if (progressLabel) {
+            progressLabel.textContent = `Descargando... ${fallbackProgress}%`;
+          }
+          console.log(`📊 Fallback progress: ${fallbackProgress}%`);
+        } else {
+          clearInterval(fallbackTimer);
+        }
+      }, 2000);
+      
       data = await downloadFromB2(b2Key || storagePath, (loaded, total, percent, speed) => {
-        // Actualizar barra de progreso visual
+        console.log(`📊 Progreso B2: ${loaded} bytes, ${percent}%, ${formatSpeed(speed || 0)}`);
+        
+        // Actualizar barra de progreso visual - SIEMPRE
         if (progressEl) {
-          progressEl.style.width = `${percent}%`;
+          const displayPercent = Math.max(5, percent); // Mínimo 5% para mostrar algo
+          progressEl.style.width = `${displayPercent}%`;
+          progressEl.textContent = `${percent}%`;
+          console.log(`📊 Barra actualizada: ${displayPercent}%`);
+        }
+        
+        // Actualizar label con información detallada
+        if (progressLabel) {
           if (total && speed) {
             const remaining = (total - loaded) / speed;
-            progressEl.textContent = `${percent}%`;
-            if (progressLabel) {
-              progressLabel.textContent = `${formatBytes(loaded)} de ${formatBytes(total)} - ${formatSpeed(speed)} - ${formatTime(remaining)} restante`;
-            }
+            progressLabel.textContent = `${formatBytes(loaded)} de ${formatBytes(total)} - ${formatSpeed(speed)} - ${formatTime(remaining)} restante`;
           } else {
-            progressEl.textContent = `${formatBytes(loaded)}`;
-            if (progressLabel) {
-              progressLabel.textContent = `Descargado: ${formatBytes(loaded)} - ${formatSpeed(speed || 0)}`;
-            }
+            progressLabel.textContent = `Descargado: ${formatBytes(loaded)} - ${formatSpeed(speed || 0)}`;
           }
         }
         
-        // Actualizar toast con progreso menos frecuente
-        if (percent > 0 && percent % 10 === 0) {
-          showToast(`Descargando: ${percent}% (${formatSpeed(speed || 0)})`, "info");
+        // Toast solo en hitos importantes para no saturar
+        if (percent === 25 || percent === 50 || percent === 75) {
+          showToast(`Descarga B2: ${percent}% completado`, "info");
         }
       });
       
@@ -1636,6 +1657,9 @@ async function downloadAndDestroy(storagePath, dropId, fileName, contentType = "
       if (progressLabel) {
         progressLabel.textContent = '';
       }
+      
+      // Limpiar fallback timer
+      clearInterval(fallbackTimer);
       
       const downloadTime = ((Date.now() - startTime) / 1000).toFixed(1);
       console.log(`✅ Descarga B2 completada en ${downloadTime}s`);

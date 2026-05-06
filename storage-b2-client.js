@@ -223,21 +223,23 @@ export async function downloadFromB2(key, onProgress = null) {
       const speed = loaded / elapsed;
       const percent = total ? Math.round((loaded / total) * 100) : 0;
       
-      // Actualizar progreso cada 500ms o cada 1MB
-      if (now - lastProgressTime > 500 || loaded % (1024 * 1024) < value.length) {
+      // Actualizar progreso cada 250ms para mejor responsividad
+      if (now - lastProgressTime > 250) {
         lastProgressTime = now;
         
-        // Callback para UI
+        // Callback para UI - SIEMPRE llamar para mantener UI actualizada
         if (onProgress) {
           onProgress(loaded, total, percent, speed);
         }
         
-        // Log detallado
-        if (total) {
-          const remaining = (total - loaded) / speed;
-          console.log(`📥 Descarga B2: ${formatBytes(loaded)}/${formatBytes(total)} (${percent}%) - ${formatSpeed(speed)} - ETA: ${formatTime(remaining)}`);
-        } else {
-          console.log(`📥 Descarga B2: ${formatBytes(loaded)} - ${formatSpeed(speed)}`);
+        // Log cada 1MB o cada 5 segundos para no saturar consola
+        if (loaded % (1024 * 1024) < value.length || now - startTime > 5000) {
+          if (total) {
+            const remaining = (total - loaded) / speed;
+            console.log(`📥 Descarga B2: ${formatBytes(loaded)}/${formatBytes(total)} (${percent}%) - ${formatSpeed(speed)} - ETA: ${formatTime(remaining)}`);
+          } else {
+            console.log(`📥 Descarga B2: ${formatBytes(loaded)} - ${formatSpeed(speed)}`);
+          }
         }
       }
     }

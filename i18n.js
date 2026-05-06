@@ -366,8 +366,21 @@ function setupLanguageButton() {
     // Actualizar botón
     btn.textContent = newLang === 'es' ? 'EN' : 'ES';
     
-    // Actualizar página
+    // Actualizar UI principal
     window.i18n.updateUI();
+    
+    // CONECTAR con las funciones específicas de cada página
+    if (typeof updatePrivacyPage === 'function') {
+      updatePrivacyPage(); // privacy.html
+    }
+    if (typeof updateTermsPage === 'function') {
+      updateTermsPage(); // terms.html  
+    }
+    if (typeof applyTranslations === 'function') {
+      applyTranslations(newLang); // index.html
+    }
+    
+    console.log('🌐 Idioma cambiado a:', newLang);
   };
 }
 

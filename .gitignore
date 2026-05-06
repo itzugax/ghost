@@ -10,6 +10,9 @@ node_modules/
 supabase/.branches/
 supabase/.temp/
 
+# Supabase credentials
+supabase-config.js
+
 # Editores
 .vscode/settings.json
 .vscode/
@@ -28,7 +31,3 @@ npm-debug.log*
 # Build output (si aplica en el futuro)
 dist/
 build/
-
-# Test artifacts
-playwright-report/
-test-results/

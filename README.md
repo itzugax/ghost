@@ -1,65 +1,58 @@
-# 👻 GHOST-DROP
+# 👻 Ghost Drop
 
-> Comparte archivos en 5 segundos. Sin registro. Sin apps. Cifrado E2E.
+> Share files in 5 seconds. No signup. No apps. E2E encrypted.
 
-**El problema:** Compartir un archivo en 2026 requiere registro, descargar apps, crear cuentas, esperar verificaciones...
-
-**Ghost Drop:** Código de 6 dígitos → Arrastra archivo → Listo. **Cero fricción.**
+The fastest way to share files. Generate a 6-digit room code, drag your files, share the code. Files auto-destruct after a configurable time (1-15 minutes). Zero registration.
 
 ---
 
-## 🚀 Por qué es diferente
+## Why it's different
 
-| Otras apps | Ghost Drop |
+| Other apps | Ghost Drop |
 |------------|------------|
-| ❌ Registro obligatorio | ✅ Cero registro |
-| ❌ Descarga app (50MB+) | ✅ Solo web |
-| ❌ Login con email | ✅ Código de 6 dígitos |
-| ❌ Archivos permanentes | ✅ Auto-destrucción |
-| ❌ 5 minutos de setup | ✅ 5 segundos |
-| ❌ Sin cifrado o cifrado opaco | ✅ Cifrado E2E transparente |
-| ❌ Límite 50MB | ✅ Hasta 500MB (Backblaze B2) |
-| ❌ Sin recovery | ✅ Recovery key de 12 palabras |
+| ❌ Mandatory signup | ✅ Zero signup |
+| ❌ App download (50MB+) | ✅ Web only |
+| ❌ Email login | ✅ 6-digit code |
+| ❌ Permanent files | ✅ Auto-destruction |
+| ❌ 5 minutes setup | ✅ 5 seconds |
+| ❌ Opaque or no encryption | ✅ Transparent E2E encryption |
+| ❌ 50MB limit | ✅ Up to 500MB (Backblaze B2) |
 
-## 🆕 Novedades v3.5.2
+## 🔐 Security
 
-- **🔑 Recovery Key**: Clave de recuperación de 12 palabras para no perder acceso
-- **📦 Storage B2**: Archivos grandes hasta 500MB usando Backblaze B2 proxy
-- **🧪 Tests automatizados**: 12 tests E2E con Playwright (100% cobertura crítica)
+- **Real E2E encryption**: AES-256-GCM via Web Crypto API for files and text
+- **Derived key**: PBKDF2 with 100,000 iterations from room code
+- **Server sees only ciphertext**: Not even we can read your files
+- **Auto-destruction**: Files delete automatically (1-15 min)
+- **Privacy by design**: No accounts, no user profiles, no tracking
 
-## 🔐 Seguridad
+## 💡 Use cases
 
-- **Cifrado E2E real**: AES-256-GCM usando Web Crypto API para archivos y textos
-- **Clave derivada del código de sala**: PBKDF2 con 100,000 iteraciones
-- **Supabase solo ve payloads cifrados**: Ni siquiera nosotros podemos leer tus archivos ni textos
-- **Auto-destrucción**: Los archivos se borran automáticamente (1-15 min)
-- **Privacidad por diseño**: Sin cuentas ni perfiles de usuario
-
-## 💡 Casos de uso
-
-- 🎤 **Eventos/conferencias**: "Escanea el QR para las slides"
-- 💼 **Reuniones**: Sin "¿me lo mandas por email?"
-- 🏫 **Aulas**: Profesor → 30 estudiantes en segundos
-- 🏢 **Oficinas**: Entre escritorios sin Slack/Teams
-- ✈️ **Viajes**: Comparte fotos sin WhatsApp comprimido
-- 🔧 **Soporte técnico**: Envía logs sin subir a servicios públicos
+- 🎤 **Events/conferences**: "Scan the QR for the slides"
+- 💼 **Meetings**: No "can you email me that?"
+- 🏫 **Classrooms**: Teacher → 30 students in seconds
+- 🏢 **Offices**: Between desks without Slack/Teams
+- ✈️ **Travel**: Share photos without WhatsApp compression
+- 🔧 **Tech support**: Send logs without uploading to public services
 
 ---
 
-## 🛠️ Setup en Supabase
+## 🛠️ Setup
 
-### 1. Crear proyecto en [supabase.com](https://supabase.com)
+### 1. Create a Supabase project
 
-### 2. Crear las tablas (SQL Editor)
+Go to [supabase.com](https://supabase.com) and create a new project.
+
+### 2. Create tables (SQL Editor)
 
 ```sql
--- Tabla de salas
+-- Rooms table
 create table rooms (
   id text primary key,
   last_seen timestamptz default now()
 );
 
--- Tabla de drops
+-- Drops table
 create table drops (
   id uuid primary key default gen_random_uuid(),
   room_id text references rooms(id) on delete cascade,
@@ -70,68 +63,54 @@ create table drops (
   created_at timestamptz default now()
 );
 
--- Índice para consultas por sala
+-- Indexes
 create index drops_room_id_idx on drops(room_id);
 create index drops_expires_at_idx on drops(expires_at);
 ```
 
-### 3. Habilitar Realtime
+### 3. Enable Realtime
 
-En el dashboard de Supabase:
-- **Database → Replication** → activa la tabla `drops`
+In Supabase dashboard:
+- **Database → Replication** → enable `drops` table
 
-### 4. Crear el bucket de Storage
+### 4. Create Storage bucket
 
-- Nombre: `ghost-drop`
-- Tipo: **Private** (los archivos se sirven via signed URLs o download directo con anon key)
+- Name: `ghost-drop`
+- Type: **Private**
 
 ### 5. Row Level Security (RLS)
 
 ```sql
--- Rooms: baseline para producción (sin auth, pero validado)
+-- Rooms
 alter table rooms enable row level security;
 create policy "rooms_select_all" on rooms for select using (true);
 create policy "rooms_insert_valid_code" on rooms
-  for insert
-  with check (id ~ '^[0-9]{6}$');
+  for insert with check (id ~ '^[0-9]{6}$');
 create policy "rooms_update_valid_code" on rooms
-  for update
-  using (id ~ '^[0-9]{6}$')
-  with check (id ~ '^[0-9]{6}$');
+  for update using (id ~ '^[0-9]{6}$') with check (id ~ '^[0-9]{6}$');
 
--- Drops: restringir formato y expiración
+-- Drops
 alter table drops enable row level security;
 create policy "drops_select_all" on drops for select using (true);
 create policy "drops_insert_guardrails" on drops
-  for insert
-  with check (
+  for insert with check (
     room_id ~ '^[0-9]{6}$'
     and file_size > 0
     and file_size <= 524288000
     and expires_at <= now() + interval '15 minutes'
   );
 create policy "drops_delete_all" on drops for delete using (true);
-```
 
-```sql
--- Storage: politicas minimas para pruebas/MVP
+-- Storage
 insert into storage.buckets (id, name, public) values ('ghost-drop', 'ghost-drop', false);
-
-create policy "anon upload" on storage.objects
-  for insert with check (bucket_id = 'ghost-drop');
-
-create policy "anon download" on storage.objects
-  for select using (bucket_id = 'ghost-drop');
-
-create policy "anon delete" on storage.objects
-  for delete using (bucket_id = 'ghost-drop');
+create policy "anon upload" on storage.objects for insert with check (bucket_id = 'ghost-drop');
+create policy "anon download" on storage.objects for select using (bucket_id = 'ghost-drop');
+create policy "anon delete" on storage.objects for delete using (bucket_id = 'ghost-drop');
 ```
 
-### 6. Edge Function obligatoria para limpieza real
+### 6. Cleanup Edge Function
 
-Sin esta funcion, la UI puede ocultar archivos expirados pero el objeto fisico puede seguir en Supabase Storage.
-
-Crea una Edge Function con cron cada minuto para borrar drops expirados:
+Create an Edge Function to delete expired files:
 
 ```typescript
 // supabase/functions/cleanup/index.ts
@@ -157,103 +136,73 @@ Deno.serve(async () => {
 });
 ```
 
-Deploy y schedule:
+Deploy and schedule:
 
 ```bash
 supabase functions deploy cleanup --no-verify-jwt
 ```
 
-Luego programa la funcion desde Supabase para correr cada `1 minute` o `5 minutes`.
+Then schedule it to run every minute via Supabase cron.
 
-Prueba recomendada:
+### 7. Configure credentials
 
-1. Sube un archivo con TTL de `1 min`.
-2. Verifica que aparezca en `drops` y en el bucket `ghost-drop`.
-3. Espera 60-90 segundos.
-4. Comprueba que desaparece de la UI y luego de Supabase.
-5. Si quieres forzarlo mientras pruebas, usa el boton `Limpiar expirados` dentro de la sala.
+Copy `supabase-config.example.js` to `supabase-config.js` and fill in your values:
 
-### 7. Configurar credenciales
+```bash
+cp supabase-config.example.js supabase-config.js
+```
 
-Edita `supabase-config.js`:
+Then edit `supabase-config.js`:
 
 ```js
-const SUPABASE_URL = "https://TU_PROYECTO.supabase.co";
-const SUPABASE_ANON_KEY = "TU_ANON_KEY";
+const SUPABASE_URL = "https://YOUR_PROJECT_ID.supabase.co";
+const SUPABASE_ANON_KEY = "YOUR_ANON_KEY";
 ```
+
+> **Note:** `supabase-config.js` is git-ignored. Never commit your real credentials.
+
+### Optional: Backblaze B2 for large files
+
+For files up to 500MB, configure Backblaze B2 via the proxy server (`b2-proxy.js`). See comments in the file for setup.
 
 ---
 
-## 🚀 Correr localmente
+## 🚀 Run locally
 
-Cualquier servidor estático sirve. Ejemplo con Python:
+Any static server works:
 
 ```bash
-cd GHOST-DROP
+# Python
 python -m http.server 3000
-```
 
-O con Node:
-```bash
+# Node.js
 npx serve .
 ```
 
 ---
 
-## 🔒 Notas de seguridad
-
-- **Cifrado E2E**: Todos los archivos se cifran en tu navegador antes de subirlos. La clave se deriva del código de sala usando PBKDF2.
-- **Textos y archivos**: Ambos se cifran en el navegador antes de persistirse.
-- **Supabase no puede leer tus archivos**: Solo almacena payloads cifrados.
-- **El código de sala es la clave**: Cualquiera con el código puede descifrar. Compártelo solo con quien confíes.
-- **Recovery Key**: Guarda tu clave de recuperación de 12 palabras para no perder acceso.
-- **Importante**: Un código de 6 dígitos prioriza facilidad de uso, no máxima resistencia ante ataques offline. Para un entorno más sensible conviene usar secretos más largos.
-- **Auto-destrucción**: Requiere tener activo el cleanup server-side en Supabase para borrar tambien el objeto fisico del bucket.
-- **Sin cuentas ni perfiles**: No hay registro de usuarios ni login.
-- **Operación del proxy**: Si activas `B2_PROXY_TOKEN`, los endpoints del proxy exigen token.
-
----
-
-## 🧪 Testing
-
-Ghost Drop incluye tests automatizados E2E con Playwright:
-
-```bash
-# Instalar dependencias
-npm install
-npx playwright install
-
-# Correr tests
-npm test
-
-# Modo interactivo
-npm run test:ui
-```
-
-**Cobertura:** 12 tests cubriendo flujos críticos (salas, upload/download, cifrado, realtime).
-
-Ver [tests/README.md](tests/README.md) para más detalles.
-
----
-
-## 📦 Archivos grandes
-
-Ghost Drop soporta archivos hasta **500MB** usando Backblaze B2 mediante proxy:
-
-- **Subida/descarga** via `b2-proxy.js`
-- **Cifrado E2E** siempre en el navegador antes de subir
-
-**Setup:** Ver [SETUP-BACKBLAZE-B2.md](SETUP-BACKBLAZE-B2.md) para configurar B2.
-
----
-
-## 📁 Estructura
+## 📁 Structure
 
 ```
-GHOST-DROP/
-├── index.html          # UI principal
-├── style.css           # Estética terminal/hacker
-├── app.js              # Lógica completa (geo, upload, download, realtime)
-├── supabase-config.js  # Credenciales (no commitear en producción)
-└── README.md
+ghost-drop/
+├── index.html           # Main UI (SPA)
+├── style.css            # Apple-inspired design system
+├── app.js               # Core logic (rooms, upload, download, realtime)
+├── crypto.js            # E2E encryption/decryption (Web Crypto API)
+├── i18n.js              # Internationalization (ES/EN)
+├── landing.html         # Landing page
+├── privacy.html         # Privacy policy
+├── terms.html           # Terms of service
+├── storage-b2-client.js # Backblaze B2 browser client
+├── b2-proxy.js          # Express.js B2 proxy server
+├── supabase-config.js   # Supabase credentials
+├── supabase.min.js      # Supabase JS SDK
+├── sw.js                # Service Worker (PWA)
+├── manifest.json        # PWA manifest
+├── vercel.json          # Vercel deployment config
+└── og-image.svg         # Open Graph image
 ```
+
+## 📜 License
+
+MIT License — see LICENSE file for details.

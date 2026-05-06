@@ -3,38 +3,14 @@
 # Node modules
 node_modules/
 
-# Tests
-test-*.js
-test-*.html
-COMANDO-*.txt
-
-# Documentación local
-*.md
-!README.md
-
-# Archivos de desarrollo
-.env.local
+# Development files
 .vscode/
+.env.local
+.env
 
-# Playwright
+# Test artifacts (if any remain)
 playwright-report/
-playwright.config.js
+test-results/
 
-# Instaladores
-install.bat
-install.sh
-
-# Archivos de migración
+# Personal dev notes (already cleaned, but keep ignore for future)
 *.sql
-
-# Frontend (se despliega por separado)
-index.html
-landing.html
-privacy.html
-manifest.json
-qrcode.min.js
-app.js
-crypto.js
-supabase-config.js
-storage-b2.js
-app-telegram-integration.js

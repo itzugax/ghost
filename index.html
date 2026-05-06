@@ -3,277 +3,598 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Ghost Drop — Comparte archivos en 5 segundos</title>
-  <meta name="description" content="Comparte archivos cifrados sin registro ni apps. Solo entra con un código y arrastra. Auto-destrucción. Cero fricción." />
+  <title>Ghost Drop — Share files in 5 seconds</title>
+  <meta name="description" content="The fastest way to share files. No signup, no apps, E2E encrypted. Zero friction." />
   
   <!-- SEO -->
-  <meta name="keywords" content="compartir archivos, file sharing, efímero, cifrado, sin registro, airdrop web, snapdrop alternativa" />
-  <meta name="author" content="Ugax" />
-  <link rel="canonical" href="https://ghostdrop.vercel.app" />
+  <meta name="keywords" content="file sharing, ephemeral, encrypted, no signup, airdrop web, anonymous file transfer" />
   
-  <!-- Open Graph / Facebook -->
+  <!-- Open Graph -->
   <meta property="og:type" content="website" />
-  <meta property="og:url" content="https://ghostdrop.vercel.app" />
-  <meta property="og:title" content="Ghost Drop — Comparte archivos en 5 segundos" />
-  <meta property="og:description" content="Sin registro. Sin apps. Cifrado E2E. La forma más rápida de compartir archivos." />
-  <meta property="og:image" content="https://ghostdrop.vercel.app/og-image.png" />
+  <meta property="og:url" content="https://gdrop.vercel.app" />
+  <meta property="og:title" content="Ghost Drop — Share files in 5 seconds" />
+  <meta property="og:description" content="No signup. No apps. E2E encryption. The fastest way to share files." />
+  <meta property="og:image" content="https://gdrop.vercel.app/og-image.svg" />
   
   <!-- Twitter -->
   <meta property="twitter:card" content="summary_large_image" />
-  <meta property="twitter:url" content="https://ghostdrop.vercel.app" />
-  <meta property="twitter:title" content="Ghost Drop — Comparte archivos en 5 segundos" />
-  <meta property="twitter:description" content="Sin registro. Sin apps. Cifrado E2E. La forma más rápida de compartir archivos." />
-  <meta property="twitter:image" content="https://ghostdrop.vercel.app/og-image.png" />
+  <meta property="twitter:url" content="https://gdrop.vercel.app" />
+  <meta property="twitter:title" content="Ghost Drop — Share files in 5 seconds" />
+  <meta property="twitter:description" content="No signup. No apps. E2E encryption. The fastest way to share files." />
+  <meta property="twitter:image" content="https://gdrop.vercel.app/og-image.svg" />
   
   <!-- Theme -->
   <meta name="theme-color" content="#f2f2f7" media="(prefers-color-scheme: light)" />
   <meta name="theme-color" content="#000000" media="(prefers-color-scheme: dark)" />
   
-  <!-- PWA -->
-  <link rel="manifest" href="manifest.json" />
-  <meta name="apple-mobile-web-app-capable" content="yes" />
-  <meta name="apple-mobile-web-app-status-bar-style" content="default" />
-  <meta name="apple-mobile-web-app-title" content="GhostDrop" />
-
-  <!-- QR Code library (local) -->
-  <script src="qrcode.min.js"></script>
-  <!-- JSZip for bulk download -->
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
-  <!-- Supabase -->
-  <script src="supabase.min.js"></script>
   <link rel="stylesheet" href="style.css" />
-  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>👻</text></svg>" />
+  <link rel="icon" href="favicon.svg" type="image/svg+xml" />
+  
+  <!-- Plausible Analytics -->
+  <script defer data-domain="gdrop.vercel.app" src="https://plausible.io/js/script.js"></script>
+  
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    
+    body {
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+    
+    header {
+      padding: 2rem 2rem 1rem;
+      text-align: center;
+      position: relative;
+    }
+    
+    .logo {
+      font-size: 1.75rem;
+      font-weight: 700;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    
+    .logo-accent {
+      color: #3b82f6;
+    }
+    
+    .lang-btn {
+      position: absolute;
+      top: 2rem;
+      right: 2rem;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 0.5rem 0.875rem;
+      font-size: 0.8125rem;
+      font-weight: 600;
+      color: var(--text);
+      cursor: pointer;
+      transition: all 0.2s ease;
+      display: flex;
+      align-items: center;
+      gap: 0.375rem;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+    }
+    
+    .lang-btn::before {
+      content: '🌐';
+      font-size: 1rem;
+      opacity: 0.7;
+    }
+    
+    .lang-btn:hover {
+      background: var(--surface-hover);
+      border-color: var(--border-hover);
+      transform: translateY(-1px);
+      box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+    }
+    
+    .lang-btn:hover::before {
+      opacity: 1;
+    }
+    
+    .lang-btn:active {
+      transform: translateY(0);
+    }
+    
+    main {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 2rem 1.5rem 3rem;
+      text-align: center;
+    }
+    
+    .hero-content {
+      max-width: 800px;
+    }
+    
+    h1 {
+      font-size: clamp(2.5rem, 7vw, 4.5rem);
+      font-weight: 700;
+      letter-spacing: -0.03em;
+      margin-bottom: 1.5rem;
+      line-height: 1.1;
+      color: #3b82f6;
+    }
+    
+    .subtitle {
+      font-size: clamp(1.125rem, 2.5vw, 1.5rem);
+      color: var(--text-2);
+      margin-bottom: 2.5rem;
+      line-height: 1.5;
+    }
+    
+    .cta-button {
+      display: inline-block;
+      padding: 1.125rem 3rem;
+      font-size: 1.25rem;
+      font-weight: 600;
+      background: linear-gradient(135deg, var(--accent) 0%, #3b82f6 100%);
+      color: white;
+      border-radius: 14px;
+      text-decoration: none;
+      transition: all 0.3s ease;
+      margin-bottom: 3rem;
+      box-shadow: 0 4px 16px rgba(139, 92, 246, 0.2);
+    }
+    
+    .cta-button:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 8px 28px rgba(139, 92, 246, 0.35);
+    }
+    
+    .stats {
+      display: flex;
+      justify-content: center;
+      gap: 4rem;
+      margin-bottom: 4rem;
+      flex-wrap: wrap;
+    }
+    
+    .stat {
+      text-align: center;
+    }
+    
+    .stat-value {
+      font-size: 3rem;
+      font-weight: 700;
+      color: var(--accent);
+      margin-bottom: 0.5rem;
+    }
+    
+    .stat-label {
+      font-size: 0.9375rem;
+      color: var(--text-2);
+    }
+    
+    .features {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 1.5rem;
+      max-width: 1000px;
+      width: 100%;
+      margin-top: 1rem;
+    }
+    
+    .feature {
+      text-align: center;
+      padding: 2rem 1.5rem;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    
+    .feature:hover {
+      border-color: var(--accent);
+      transform: translateY(-8px);
+      box-shadow: 0 12px 32px rgba(139, 92, 246, 0.15);
+    }
+    
+    .feature-icon {
+      font-size: 3.5rem;
+      margin-bottom: 1.25rem;
+      display: block;
+      transition: transform 0.3s ease;
+    }
+    
+    .feature:hover .feature-icon {
+      transform: scale(1.1);
+    }
+    
+    .feature-title {
+      font-size: 1.125rem;
+      font-weight: 600;
+      margin-bottom: 0.625rem;
+      color: var(--text);
+    }
+    
+    .feature-desc {
+      font-size: 0.875rem;
+      color: var(--text-2);
+      line-height: 1.6;
+    }
+    
+    .how-it-works {
+      margin-top: 5rem;
+      max-width: 800px;
+      width: 100%;
+    }
+    
+    .how-it-works h2 {
+      font-size: 2.5rem;
+      font-weight: 700;
+      text-align: center;
+      margin-bottom: 3rem;
+      color: var(--text);
+    }
+    
+    .steps {
+      display: flex;
+      flex-direction: column;
+      gap: 2rem;
+    }
+    
+    .step {
+      display: flex;
+      align-items: flex-start;
+      gap: 1.5rem;
+      padding: 2rem;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      transition: all 0.3s ease;
+    }
+    
+    .step:hover {
+      border-color: var(--accent);
+      transform: translateX(8px);
+      box-shadow: 0 8px 24px rgba(139, 92, 246, 0.1);
+    }
+    
+    .step-number {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 48px;
+      height: 48px;
+      background: linear-gradient(135deg, var(--accent) 0%, #3b82f6 100%);
+      color: white;
+      border-radius: 50%;
+      font-size: 1.5rem;
+      font-weight: 700;
+      flex-shrink: 0;
+    }
+    
+    .step-content {
+      flex: 1;
+    }
+    
+    .step-title {
+      font-size: 1.25rem;
+      font-weight: 600;
+      margin-bottom: 0.5rem;
+      color: var(--text);
+    }
+    
+    .step-desc {
+      font-size: 1rem;
+      color: var(--text-2);
+      line-height: 1.6;
+    }
+    
+    footer {
+      padding: 2.5rem 2rem;
+      text-align: center;
+      color: var(--text-3);
+      font-size: 0.875rem;
+      border-top: 1px solid var(--border);
+    }
+    
+    .footer-links {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 2rem;
+      flex-wrap: wrap;
+      margin-bottom: 1rem;
+    }
+    
+    footer a {
+      color: var(--text-3);
+      text-decoration: none;
+      transition: color 0.2s;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    
+    footer a:hover {
+      color: var(--text);
+    }
+    
+    .footer-copyright {
+      margin-top: 1rem;
+      font-size: 0.8125rem;
+    }
+    
+    @media (max-width: 640px) {
+      header {
+        padding: 1.5rem 1.5rem 1rem;
+      }
+      
+      .lang-btn {
+        position: static;
+        margin: 0.75rem auto 0;
+      }
+      
+      .logo {
+        font-size: 1.5rem;
+      }
+      
+      .stats {
+        gap: 2rem;
+      }
+      
+      .stat-value {
+        font-size: 2.5rem;
+      }
+      
+      .features {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 1.5rem;
+      }
+      
+      .feature {
+        padding: 1rem 0.5rem;
+      }
+      
+      .feature-icon {
+        font-size: 2.5rem;
+      }
+      
+      .how-it-works h2 {
+        font-size: 2rem;
+      }
+      
+      .step {
+        padding: 1.5rem;
+        gap: 1rem;
+      }
+      
+      .step-number {
+        width: 40px;
+        height: 40px;
+        font-size: 1.25rem;
+      }
+      
+      .step-title {
+        font-size: 1.125rem;
+      }
+      
+      .step-desc {
+        font-size: 0.9375rem;
+      }
+      
+      .footer-links {
+        gap: 1.5rem;
+      }
+    }
+  </style>
 </head>
 <body>
-
+  
   <header>
-    <div class="logo">👻 Ghost<span style="color: #3b82f6;">Drop</span></div>
-    <div class="tagline" data-i18n="tagline">Comparte archivos en 5 segundos. Sin registro. Sin apps. Cifrado E2E.</div>
+    <div class="logo">
+      <span>👻</span>
+      <span>Ghost<span class="logo-accent">Drop</span></span>
+    </div>
     <button id="lang-btn" class="lang-btn" title="Change language">EN</button>
   </header>
 
-  <!-- Estado -->
-  <div class="card" id="status-card">
-    <div id="status" class="status info" data-i18n="statusNoRoom">Sin sala activa</div>
-    <div id="room-badge" class="room-badge hidden">
-      <span id="room-code-display"></span>
-      <span id="members-count" class="members-count"></span>
-      <div class="badge-actions">
-        <button id="copy-room-btn" class="badge-btn" title="Copiar código">
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
-          <span data-i18n="copyBtn">Copiar</span>
-        </button>
-        <button id="invite-btn" class="badge-btn" title="Invitar">
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg>
-          <span data-i18n="inviteBtn">Invitar</span>
-        </button>
-        <button id="qr-btn" class="badge-btn" title="Ver QR">
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="3" height="3"/></svg>
-          <span data-i18n="qrBtn">QR</span>
-        </button>
-        <button id="leave-btn" class="badge-btn danger" title="Salir">
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
-          <span data-i18n="leaveBtn">Salir</span>
-        </button>
+  <main>
+    <div class="hero-content">
+      <h1 data-i18n="heroTitle">Share files<br>in 5 seconds</h1>
+      <p class="subtitle" data-i18n="subtitle">No signup · No apps · E2E encryption<br>The fastest way to share files</p>
+      
+      <a href="./app.html" class="cta-button" data-i18n="ctaButton">🚀 Start free</a>
+      
+      <div class="stats">
+        <div class="stat">
+          <div class="stat-value">5s</div>
+          <div class="stat-label" data-i18n="stat1Label">To share</div>
+        </div>
+        <div class="stat">
+          <div class="stat-value">500MB</div>
+          <div class="stat-label" data-i18n="stat2Label">Per file</div>
+        </div>
+        <div class="stat">
+          <div class="stat-value">∞</div>
+          <div class="stat-label" data-i18n="stat3Label">Free files</div>
+        </div>
       </div>
-    </div>
-  </div>
-
-  <!-- Unirse / crear sala -->
-  <div class="card" id="room-section">
-    <div class="card-title" data-i18n="roomTitle">Entrar a una sala</div>
-    <p class="room-desc" data-i18n="roomDesc">Usa un código de 6 dígitos para compartir con quien quieras, desde cualquier red.</p>
-
-    <!-- Input de dígitos individuales -->
-    <div class="digit-input-row">
-      <div class="digit-boxes" id="digit-boxes">
-        <input class="digit-box" type="text" inputmode="numeric" maxlength="1" pattern="[0-9]" autocomplete="off" />
-        <input class="digit-box" type="text" inputmode="numeric" maxlength="1" pattern="[0-9]" autocomplete="off" />
-        <input class="digit-box" type="text" inputmode="numeric" maxlength="1" pattern="[0-9]" autocomplete="off" />
-        <input class="digit-box" type="text" inputmode="numeric" maxlength="1" pattern="[0-9]" autocomplete="off" />
-        <input class="digit-box" type="text" inputmode="numeric" maxlength="1" pattern="[0-9]" autocomplete="off" />
-        <input class="digit-box" type="text" inputmode="numeric" maxlength="1" pattern="[0-9]" autocomplete="off" />
+      
+      <div class="features">
+        <div class="feature">
+          <span class="feature-icon">⚡</span>
+          <div class="feature-title" data-i18n="feat1Title">5 seconds</div>
+          <div class="feature-desc" data-i18n="feat1Desc">6-digit code<br>and you're sharing</div>
+        </div>
+        
+        <div class="feature">
+          <span class="feature-icon">🔐</span>
+          <div class="feature-title">AES-256-GCM</div>
+          <div class="feature-desc" data-i18n="feat2Desc">Real end-to-end<br>encryption</div>
+        </div>
+        
+        <div class="feature">
+          <span class="feature-icon">👻</span>
+          <div class="feature-title" data-i18n="feat3Title">Zero tracking</div>
+          <div class="feature-desc" data-i18n="feat3Desc">No IPs, no emails<br>no digital trail</div>
+        </div>
+        
+        <div class="feature">
+          <span class="feature-icon">🔥</span>
+          <div class="feature-title" data-i18n="feat4Title">Self-destruct</div>
+          <div class="feature-desc" data-i18n="feat4Desc">Files delete<br>automatically</div>
+        </div>
       </div>
-      <button id="join-btn" class="btn-primary" data-i18n="joinBtn">Entrar</button>
-    </div>
-    <!-- Input oculto para compatibilidad con el resto del JS -->
-    <input id="room-input" type="hidden" />
-
-    <button id="new-room-btn" class="btn-secondary" data-i18n="newRoomBtn">🎲 Sala aleatoria</button>
-
-    <!-- Salas recientes -->
-    <div id="recent-rooms" style="display:none">
-      <div class="section-label" data-i18n="recentLabel">Recientes</div>
-      <div id="recent-list" class="recent-list"></div>
-    </div>
-  </div>
-
-  <!-- Subir archivo -->
-  <div class="card hidden" id="drop-section">
-    <div class="card-title" data-i18n="dropTitle">Compartir archivo</div>
-    <div id="dropzone">
-      <span class="drop-icon">📂</span>
-      <div class="drop-label" data-i18n="dropLabel">Arrastra archivos aquí</div>
-      <div class="drop-sub" data-i18n="dropSub" data-i18n-html="true">o toca para seleccionar · <strong>Máx: 500MB</strong></div>
-    </div>
-    <input type="file" id="file-input" multiple />
-    <div id="progress-wrap">
-      <div id="progress-bar"></div>
-    </div>
-    <div id="progress-label" class="progress-label"></div>
-  </div>
-
-  <!-- Enviar texto -->
-  <div class="card hidden" id="text-section">
-    <div class="card-title" data-i18n="textTitle">Compartir texto / enlace</div>
-    <textarea id="text-input" data-i18n="textPlaceholder" placeholder="Pega un texto, enlace o nota…" rows="3"></textarea>
-    <div id="typing-indicator" class="typing-indicator">
-      <div class="typing-dot"></div>
-      <div class="typing-dot"></div>
-      <div class="typing-dot"></div>
-      <span data-i18n="typingIndicator">alguien está escribiendo…</span>
-    </div>
-    <div class="text-actions">
-      <div class="ttl-options">
-        <button class="ttl-btn" data-secs="60" data-i18n="ttl1min">1 min</button>
-        <button class="ttl-btn active" data-secs="300" data-i18n="ttl5min">5 min</button>
-        <button class="ttl-btn" data-secs="900" data-i18n="ttl15min">15 min</button>
-      </div>
-      <button id="send-text-btn" class="btn-primary" data-i18n="sendBtn">Enviar</button>
-    </div>
-  </div>
-
-  <!-- Lista de drops -->
-  <div class="card hidden" id="list-section">
-    <div class="list-header">
-      <div class="card-title" style="margin:0"><span data-i18n="listTitle">En la sala</span> <span id="drop-count" class="drop-count"></span></div>
-      <button id="download-all-btn" class="badge-btn hidden" title="Descargar todo como ZIP">
-        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-        <span data-i18n="downloadAllBtn">Descargar todo</span>
-      </button>
-      <button id="notify-btn" class="badge-btn" title="Activar notificaciones">
-        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
-        <span data-i18n="notifyBtn">Notificar</span>
-      </button>
-      <button id="compact-btn" class="badge-btn" title="Modo compacto">
-        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
-      </button>
-    </div>
-    <ul id="files-list">
-      <li class="empty-state">
-        <span class="empty-ghost" data-i18n="emptyGhost">👻</span>
-        <span class="empty-title" data-i18n="emptyTitle">La sala está despejada.</span>
-        <span class="empty-sub" data-i18n="emptySub">El radar no detecta archivos.</span>
-      </li>
-    </ul>
-  </div>
-
-  <!-- Modal QR -->
-  <div id="qr-modal" class="modal-backdrop hidden">
-    <div class="modal">
-      <div class="modal-title" data-i18n="qrTitle">Escanea para unirte</div>
-      <div id="qr-canvas"></div>
-      <div class="modal-code" id="modal-code"></div>
-      <button id="qr-close" class="btn-primary" style="width:100%" data-i18n="qrClose">Cerrar</button>
-    </div>
-  </div>
-
-  <!-- Notificación toast -->
-  <div id="toast" class="toast hidden"></div>
-
-  <!-- Onboarding tooltip (primera visita) -->
-  <div id="onboarding-tooltip" class="onboarding-tooltip hidden">
-    <div class="onboarding-content">
-      <div class="onboarding-header">
-        <div class="onboarding-icon">👋</div>
-        <button id="onboarding-close" class="onboarding-close">✕</button>
-      </div>
-      <div class="onboarding-text">
-        <div class="onboarding-title" data-i18n="onboardingTitle">¡Bienvenido a Ghost Drop!</div>
-        <div class="onboarding-desc" data-i18n="onboardingDesc">Compartir archivos nunca fue tan fácil:</div>
-        <div class="onboarding-steps">
-          <div class="onboarding-step">
-            <span class="step-number">1</span>
-            <span class="step-text" data-i18n="onboardingStep1">Crea una sala con 6 dígitos</span>
+      
+      <div class="how-it-works">
+        <h2 data-i18n="howTitle">How it works?</h2>
+        <div class="steps">
+          <div class="step">
+            <div class="step-number">1</div>
+            <div class="step-content">
+              <div class="step-title" data-i18n="step1Title">Create a room</div>
+              <div class="step-desc" data-i18n="step1Desc">Generate a 6-digit code or use a custom one</div>
+            </div>
           </div>
-          <div class="onboarding-step">
-            <span class="step-number">2</span>
-            <span class="step-text" data-i18n="onboardingStep2">Arrastra tus archivos</span>
+          <div class="step">
+            <div class="step-number">2</div>
+            <div class="step-content">
+              <div class="step-title" data-i18n="step2Title">Drag files</div>
+              <div class="step-desc" data-i18n="step2Desc">Upload up to 500MB per file, encrypted automatically</div>
+            </div>
           </div>
-          <div class="onboarding-step">
-            <span class="step-number">3</span>
-            <span class="step-text" data-i18n="onboardingStep3">Comparte el código</span>
+          <div class="step">
+            <div class="step-number">3</div>
+            <div class="step-content">
+              <div class="step-title" data-i18n="step3Title">Share the code</div>
+              <div class="step-desc" data-i18n="step3Desc">Send the code to anyone, from any network</div>
+            </div>
           </div>
         </div>
-        <button id="onboarding-cta" class="onboarding-cta" data-i18n="onboardingCta">Entendido, empecemos 🚀</button>
       </div>
     </div>
-    <div class="onboarding-backdrop"></div>
-  </div>
-
-  <!-- TTL Picker flotante (aparece al soltar archivo) -->
-  <div id="ttl-picker" class="ttl-picker hidden" role="dialog" aria-modal="true" aria-label="Seleccionar tiempo">
-    <div class="ttl-picker-backdrop"></div>
-    <div class="ttl-picker-sheet">
-      <div class="ttl-picker-title" data-i18n="ttlPickerTitle">¿Cuánto tiempo le damos?</div>
-      <div class="ttl-picker-sub" data-i18n="ttlPickerSub">El archivo desaparecerá para todos al expirar</div>
-      <div class="ttl-picker-options">
-        <button class="ttl-picker-btn" data-secs="60">
-          <span class="ttl-picker-time">1</span>
-          <span class="ttl-picker-unit">min</span>
-        </button>
-        <button class="ttl-picker-btn" data-secs="300">
-          <span class="ttl-picker-time">5</span>
-          <span class="ttl-picker-unit">min</span>
-        </button>
-        <button class="ttl-picker-btn" data-secs="900">
-          <span class="ttl-picker-time">15</span>
-          <span class="ttl-picker-unit">min</span>
-        </button>
-      </div>
-      <label class="ttl-picker-burn">
-        <input type="checkbox" id="burn-after-reading" />
-        <span data-i18n="ttlPickerBurn">🔥 Borrar después de 1 descarga</span>
-      </label>
-      <button class="ttl-picker-cancel" data-i18n="ttlPickerCancel">Cancelar</button>
-    </div>
-  </div>
-
-  <!-- Modal imagen -->
-  <div id="img-modal" class="modal-backdrop hidden" onclick="if(event.target===this)this.classList.add('hidden')">
-    <div class="img-modal-inner">
-      <div class="img-modal-header">
-        <span id="img-modal-title" class="img-modal-title"></span>
-        <button class="badge-btn" onclick="document.getElementById('img-modal').classList.add('hidden')">✕ Cerrar</button>
-      </div>
-      <img id="img-modal-img" class="img-modal-img" alt="" />
-    </div>
-  </div>
+  </main>
 
   <footer>
-    <span>Ghost Drop · <span data-i18n="tagline">Cifrado E2E · Cero fricción</span></span>
-    <span id="total-uploads" class="footer-stat"></span>
     <div class="footer-links">
-      <a href="/privacy.html" data-i18n="footerPrivacy">Privacidad</a>
-      <span>·</span>
-      <a href="/terms.html" data-i18n="footerTerms">Términos</a>
-      <span>·</span>
-      <a href="https://github.com/itzugax/ghost" target="_blank" rel="noopener" class="github-link">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+      <a href="./privacy.html" data-i18n="footerPrivacy">Privacy</a>
+      <a href="./terms.html" data-i18n="footerTerms">Terms</a>
+      <a href="https://github.com/itzugax/ghost" target="_blank">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
           <path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/>
         </svg>
-        <span data-i18n="footerOpenSource">Open Source</span>
+        GitHub
       </a>
+      <a href="mailto:jorgeugax@gmail.com" data-i18n="footerContact">Contact</a>
     </div>
-    <span class="footer-copy" data-i18n="footerCopyright">© 2026 Ugax. Todos los derechos reservados.</span>
+    <div class="footer-copyright" data-i18n="footerCopy">© 2026 Ghost Drop. Made with 👻 by Ugax</div>
   </footer>
 
-  <!-- Badge de versión -->
-  <div class="version-badge" title="Versión de la app">v3.5.1</div>
+  <script>
+    const translations = {
+      es: {
+        heroTitle: "Comparte archivos<br>en 5 segundos",
+        subtitle: "Sin registro · Sin apps · Cifrado E2E<br>La forma más rápida de compartir archivos",
+        ctaButton: "🚀 Empezar gratis",
+        stat1Label: "Para compartir",
+        stat2Label: "Por archivo",
+        stat3Label: "Archivos gratis",
+        feat1Title: "5 segundos",
+        feat1Desc: "Código de 6 dígitos<br>y listo para compartir",
+        feat2Desc: "Cifrado de extremo<br>a extremo real",
+        feat3Title: "Cero tracking",
+        feat3Desc: "Sin IPs, sin emails<br>sin rastro digital",
+        feat4Title: "Auto-destrucción",
+        feat4Desc: "Los archivos se borran<br>automáticamente",
+        howTitle: "¿Cómo funciona?",
+        step1Title: "Crea una sala",
+        step1Desc: "Genera un código de 6 dígitos o usa uno personalizado",
+        step2Title: "Arrastra archivos",
+        step2Desc: "Sube hasta 500MB por archivo, cifrado automáticamente",
+        step3Title: "Comparte el código",
+        step3Desc: "Envía el código a quien quieras, desde cualquier red",
+        footerPrivacy: "Privacidad",
+        footerTerms: "Términos",
+        footerContact: "Contacto",
+        footerCopy: "© 2026 Ghost Drop. Hecho con 👻 por Ugax"
+      },
+      en: {
+        heroTitle: "Share files<br>in 5 seconds",
+        subtitle: "No signup · No apps · E2E encryption<br>The fastest way to share files",
+        ctaButton: "🚀 Start free",
+        stat1Label: "To share",
+        stat2Label: "Per file",
+        stat3Label: "Free files",
+        feat1Title: "5 seconds",
+        feat1Desc: "6-digit code<br>and you're sharing",
+        feat2Desc: "Real end-to-end<br>encryption",
+        feat3Title: "Zero tracking",
+        feat3Desc: "No IPs, no emails<br>no digital trail",
+        feat4Title: "Self-destruct",
+        feat4Desc: "Files delete<br>automatically",
+        howTitle: "How it works?",
+        step1Title: "Create a room",
+        step1Desc: "Generate a 6-digit code or use a custom one",
+        step2Title: "Drag files",
+        step2Desc: "Upload up to 500MB per file, encrypted automatically",
+        step3Title: "Share the code",
+        step3Desc: "Send the code to anyone, from any network",
+        footerPrivacy: "Privacy",
+        footerTerms: "Terms",
+        footerContact: "Contact",
+        footerCopy: "© 2026 Ghost Drop. Made with 👻 by Ugax"
+      }
+    };
+    
+    let currentLang = 'en';
+    
+    function detectLanguage() {
+      const browserLang = navigator.language || navigator.userLanguage;
+      return browserLang.startsWith('es') ? 'es' : 'en';
+    }
+    
+    function applyTranslations(lang) {
+      currentLang = lang;
+      const t = translations[lang];
+      
+      document.querySelectorAll('[data-i18n]').forEach(el => {
+        const key = el.getAttribute('data-i18n');
+        if (t[key]) {
+          if (t[key].includes('<')) {
+            el.innerHTML = t[key];
+          } else {
+            el.textContent = t[key];
+          }
+        }
+      });
+      
+      document.documentElement.lang = lang;
+      
+      const langBtn = document.getElementById('lang-btn');
+      if (langBtn) {
+        langBtn.textContent = lang === 'es' ? 'EN' : 'ES';
+        langBtn.title = lang === 'es' ? 'Switch to English' : 'Cambiar a Español';
+      }
+      
+      document.title = lang === 'es' 
+        ? 'Ghost Drop — Comparte archivos en 5 segundos'
+        : 'Ghost Drop — Share files in 5 seconds';
+    }
+    
+    document.getElementById('lang-btn')?.addEventListener('click', () => {
+      const newLang = currentLang === 'es' ? 'en' : 'es';
+      applyTranslations(newLang);
+      localStorage.setItem('ghostdrop-lang', newLang);
+    });
+    
+    const saved = localStorage.getItem('ghostdrop-lang');
+    const lang = saved || detectLanguage();
+    applyTranslations(lang);
+  </script>
 
-  <script src="supabase-config.js"></script>
-  <script src="crypto.js"></script>
-  <script src="i18n.js"></script>
-  <script type="module" src="app.js"></script>
 </body>
 </html>

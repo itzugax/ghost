@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+  <defs>
+    <linearGradient id="ghostGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#8b5cf6"/>
+      <stop offset="100%" style="stop-color:#3b82f6"/>
+    </linearGradient>
+  </defs>
+  
+  <!-- Ghost body -->
+  <path d="M32 4 C18 4 10 14 10 28 L10 52 C10 54 8 56 6 56 L6 44 C6 42 4 40 4 42 L4 56 C4 58 2 60 0 58 L0 48 C0 46 -2 44 0 42 L0 56 C0 58 2 60 4 58 L4 28 C4 14 18 4 32 4 C46 4 60 14 60 28 L60 58 C62 60 64 58 64 56 L64 42 C64 44 62 46 60 48 L60 56 C58 58 56 56 56 54 L56 40 C56 42 54 44 54 42 L54 28 C54 14 46 4 32 4Z" fill="url(#ghostGrad)"/>
+  
+  <!-- Eyes -->
+  <circle cx="22" cy="26" r="5" fill="#0a0a0a"/>
+  <circle cx="42" cy="26" r="5" fill="#0a0a0a"/>
+  
+  <!-- Eye highlights -->
+  <circle cx="24" cy="24" r="2" fill="white" opacity="0.9"/>
+  <circle cx="44" cy="24" r="2" fill="white" opacity="0.9"/>
+  
+  <!-- Mouth -->
+  <ellipse cx="32" cy="38" rx="6" ry="3" fill="#0a0a0a"/>
+</svg>

@@ -1,5 +1,5 @@
 // ============================================================
-// GHOST-DROP — Internacionalización (i18n) — v3.6
+// GHOST-DROP — Internacionalización (i18n) - Versión Simplificada
 // ============================================================
 
 const translations = {
@@ -280,86 +280,125 @@ const translations = {
   }
 };
 
-// ─── i18n Manager ──────────────────────────────────────────
+// ─── Sistema i18n Simplificado ─────────────────────────────
 
-class I18n {
-  constructor() {
-    this.currentLang = this.detectLanguage();
-    this.loadLanguage(this.currentLang);
+let currentLang = 'en';
+
+function detectLanguage() {
+  // 1. Verificar localStorage
+  const saved = localStorage.getItem('ghostdrop-lang');
+  if (saved && translations[saved]) {
+    return saved;
   }
   
-  detectLanguage() {
-    // 1. Verificar localStorage (preferencia guardada)
-    const saved = localStorage.getItem('ghostdrop-lang');
-    if (saved && translations[saved]) {
-      return saved;
+  // 2. Detectar idioma del navegador
+  const browserLang = navigator.language || navigator.userLanguage;
+  return browserLang.startsWith('es') ? 'es' : 'en';
+}
+
+function t(key, params = {}) {
+  let text = translations[currentLang][key] || translations['en'][key] || key;
+  
+  // Reemplazar parámetros {param}
+  Object.keys(params).forEach(param => {
+    text = text.replace(new RegExp(`\\{${param}\\}`, 'g'), params[param]);
+  });
+  
+  return text;
+}
+
+function applyTranslations(lang) {
+  currentLang = lang;
+  localStorage.setItem('ghostdrop-lang', lang);
+  document.documentElement.lang = lang;
+  
+  // Actualizar el objeto global
+  window.i18n.currentLang = lang;
+  
+  // Actualizar todos los elementos con data-i18n
+  document.querySelectorAll('[data-i18n]').forEach(el => {
+    const key = el.dataset.i18n;
+    const text = t(key);
+    
+    if (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA') {
+      el.placeholder = text;
+    } else if (el.dataset.i18nHtml) {
+      el.innerHTML = text;
+    } else {
+      el.textContent = text;
     }
-    
-    // 2. Detectar idioma del navegador
-    const browserLang = navigator.language || navigator.userLanguage;
-    const langCode = browserLang.split('-')[0]; // 'es-ES' → 'es'
-    
-    // 3. Si el idioma está soportado, usarlo; sino, inglés por defecto
-    return translations[langCode] ? langCode : 'en';
-  }
+  });
   
-  loadLanguage(lang) {
-    this.currentLang = lang;
-    localStorage.setItem('ghostdrop-lang', lang);
-    document.documentElement.lang = lang;
-    this.updateUI();
-  }
+  // Actualizar botón de idioma
+  updateLanguageButton();
   
-  t(key, params) {
-    params = params || {};
-    var text = translations[this.currentLang][key] || translations['en'][key] || key;
-    
-    // Reemplazar parámetros {param} de forma simple
-    for (var param in params) {
-      if (params.hasOwnProperty(param)) {
-        var regex = new RegExp('\\{' + param + '\\}', 'g');
-        text = text.replace(regex, params[param]);
-      }
-    }
-    
-    return text;
-  }
-  
-  updateUI() {
-    // Actualizar todos los elementos con data-i18n usando for loop clásico
-    var elements = document.querySelectorAll('[data-i18n]');
-    for (var i = 0; i < elements.length; i++) {
-      var el = elements[i];
-      var key = el.getAttribute('data-i18n');
-      var text = this.t(key);
-      
-      if (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA') {
-        el.placeholder = text;
-      } else if (el.hasAttribute('data-i18n-html')) {
-        el.innerHTML = text;
-      } else {
-        el.textContent = text;
-      }
-    }
-  }
-  
-  toggleLanguage() {
-    const newLang = this.currentLang === 'es' ? 'en' : 'es';
-    this.loadLanguage(newLang);
+  console.log('🌐 Idioma aplicado:', lang);
+}
+
+function updateLanguageButton() {
+  const langBtn = document.getElementById('lang-btn');
+  if (langBtn) {
+    langBtn.textContent = currentLang === 'es' ? 'EN' : 'ES';
+    langBtn.title = currentLang === 'es' ? 'Switch to English' : 'Cambiar a Español';
   }
 }
 
-// Instancia global
-window.i18n = new I18n();
+function toggleLanguage() {
+  const newLang = currentLang === 'es' ? 'en' : 'es';
+  console.log('🌐 Cambiando idioma:', currentLang, '→', newLang);
+  applyTranslations(newLang);
+}
 
-// BOTÓN SIMPLE - COMO FUNCIONABA ANTES
-document.addEventListener('DOMContentLoaded', function() {
-  setTimeout(function() {
-    var langBtn = document.getElementById('lang-btn');
-    if (langBtn) {
-      langBtn.addEventListener('click', function() {
-        window.i18n.toggleLanguage();
-      });
-    }
-  }, 100);
-});
+// ─── Inicialización ────────────────────────────────────────
+
+function initI18n() {
+  // Detectar y aplicar idioma inicial
+  const lang = detectLanguage();
+  applyTranslations(lang);
+  
+  // Configurar botón de idioma
+  const langBtn = document.getElementById('lang-btn');
+  if (langBtn) {
+    // Remover eventos anteriores
+    langBtn.replaceWith(langBtn.cloneNode(true));
+    const newLangBtn = document.getElementById('lang-btn');
+    
+    // Agregar evento único
+    newLangBtn.addEventListener('click', function(e) {
+      e.preventDefault();
+      e.stopPropagation();
+      toggleLanguage();
+    });
+    
+    console.log('🌐 Botón de idioma configurado');
+  } else {
+    console.warn('🌐 Botón de idioma no encontrado');
+  }
+}
+
+// ─── Objeto global compatible ──────────────────────────────
+
+window.i18n = {
+  get currentLang() { return currentLang; },
+  set currentLang(lang) { currentLang = lang; },
+  t: t,
+  toggleLanguage: toggleLanguage,
+  applyTranslations: applyTranslations
+};
+
+// ─── Auto-inicialización ───────────────────────────────────
+
+// Inicializar inmediatamente si el DOM está listo
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', initI18n);
+} else {
+  initI18n();
+}
+
+// Reintentar después de un delay por si acaso
+setTimeout(() => {
+  if (document.getElementById('lang-btn') && !document.getElementById('lang-btn').onclick) {
+    console.log('🌐 Reintentando inicialización...');
+    initI18n();
+  }
+}, 1000);

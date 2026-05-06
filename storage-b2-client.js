@@ -6,22 +6,21 @@
 // URL del servidor proxy - detectar automáticamente el entorno
 const PROXY_URL = (() => {
   if (typeof window !== 'undefined') {
-    // En el navegador
     const origin = window.location.origin;
     const isDev = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
     
     if (isDev) {
-      // En desarrollo, intentar proxy local primero
+      // En desarrollo, usar proxy local
       return 'http://localhost:3001';
     } else {
-      // En producción, usar las rutas de Vercel
+      // En producción (Vercel), usar el mismo origin
       return origin;
     }
   }
-  return 'http://localhost:3001'; // Fallback
+  return window.location.origin; // Fallback para producción
 })();
 
-console.log('🔧 B2 Proxy URL:', PROXY_URL);
+console.log('🔧 B2 Proxy URL (Producción):', PROXY_URL);
 
 /**
  * Sube archivo a Backblaze B2 a través del proxy con progreso
@@ -227,31 +226,41 @@ export async function deleteFromB2(key) {
  */
 export async function testB2Connection() {
   try {
-    console.log('🔍 Verificando conexión B2...');
+    console.log('🔍 Verificando conexión B2 en Vercel...');
     
-    // Intentar diferentes URLs
-    const urls = [
-      `${PROXY_URL}/health`,
-      `${window.location.origin}/health`,
-      'http://localhost:3001/health'
-    ];
+    // En producción (Vercel), solo probar las rutas correctas
+    const isProduction = !window.location.hostname.includes('localhost');
+    
+    const urls = isProduction 
+      ? ['/health', '/api/health'] // Solo rutas de Vercel
+      : ['/health', 'http://localhost:3001/health']; // Desarrollo
     
     for (const url of urls) {
       try {
+        console.log(`🔍 Probando: ${url}`);
         const response = await fetch(url, { 
           method: 'GET',
-          timeout: 3000 
+          timeout: 5000,
+          headers: {
+            'Accept': 'application/json'
+          }
         });
+        
+        console.log(`📡 Respuesta de ${url}: ${response.status}`);
         
         if (response.ok) {
           const data = await response.json();
+          console.log(`📊 Datos recibidos:`, data);
+          
           if (data.status === 'ok') {
             console.log('✅ B2 Proxy disponible en:', url);
             return true;
           }
+        } else {
+          console.warn(`⚠️ ${url} respondió con ${response.status}`);
         }
       } catch (e) {
-        console.log('❌ B2 Proxy no disponible en:', url);
+        console.warn(`❌ Error en ${url}:`, e.message);
       }
     }
     

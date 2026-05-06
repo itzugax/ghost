@@ -12,6 +12,26 @@ import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 
 dotenv.config({ path: '.env.local' });
 
+// Validar configuración crítica
+const requiredEnvVars = {
+  B2_KEY_ID: process.env.B2_KEY_ID,
+  B2_APPLICATION_KEY: process.env.B2_APPLICATION_KEY,
+  B2_BUCKET_NAME: process.env.B2_BUCKET_NAME,
+  B2_ENDPOINT: process.env.B2_ENDPOINT
+};
+
+const missingVars = Object.entries(requiredEnvVars)
+  .filter(([key, value]) => !value)
+  .map(([key]) => key);
+
+if (missingVars.length > 0) {
+  console.error('❌ Variables de entorno faltantes para B2:');
+  missingVars.forEach(varName => {
+    console.error(`   - ${varName}`);
+  });
+  console.error('📝 Configura estas variables en Vercel Dashboard > Settings > Environment Variables');
+}
+
 const app = express();
 const PORT = process.env.B2_PROXY_PORT || 3001;
 const IS_PRODUCTION = process.env.NODE_ENV === 'production';
@@ -135,22 +155,42 @@ const upload = multer({
 });
 
 // Cliente S3 para Backblaze B2
-const s3Client = new S3Client({
-  endpoint: `https://${process.env.B2_ENDPOINT}`,
-  region: 'us-east-005',
-  credentials: {
-    accessKeyId: process.env.B2_KEY_ID,
-    secretAccessKey: process.env.B2_APPLICATION_KEY
+let s3Client = null;
+
+try {
+  if (process.env.B2_KEY_ID && process.env.B2_APPLICATION_KEY && process.env.B2_ENDPOINT) {
+    s3Client = new S3Client({
+      endpoint: `https://${process.env.B2_ENDPOINT}`,
+      region: 'us-east-005',
+      credentials: {
+        accessKeyId: process.env.B2_KEY_ID,
+        secretAccessKey: process.env.B2_APPLICATION_KEY
+      }
+    });
+    console.log('✅ Cliente S3/B2 inicializado correctamente');
+  } else {
+    console.error('❌ No se pudo inicializar cliente S3/B2 - credenciales faltantes');
   }
-});
+} catch (error) {
+  console.error('❌ Error inicializando cliente S3/B2:', error.message);
+}
 
 // Health check
 app.get('/health', (req, res) => {
-  res.json({ 
+  const config = {
     status: 'ok', 
     service: 'b2-proxy',
-    bucket: process.env.B2_BUCKET_NAME
-  });
+    environment: process.env.NODE_ENV || 'development',
+    vercel: !!process.env.VERCEL,
+    bucket: process.env.B2_BUCKET_NAME || 'NOT_CONFIGURED',
+    endpoint: process.env.B2_ENDPOINT || 'NOT_CONFIGURED',
+    keyId: process.env.B2_KEY_ID ? 'CONFIGURED' : 'NOT_CONFIGURED',
+    appKey: process.env.B2_APPLICATION_KEY ? 'CONFIGURED' : 'NOT_CONFIGURED',
+    timestamp: new Date().toISOString()
+  };
+  
+  console.log('🏥 Health check:', config);
+  res.json(config);
 });
 
 // Endpoint para configurar CORS en B2
@@ -192,6 +232,12 @@ app.post('/setup-cors', async (req, res) => {
 // Endpoint para obtener URL firmada de subida
 app.post('/get-upload-url', async (req, res) => {
   try {
+    if (!s3Client) {
+      return res.status(503).json({ 
+        error: 'Servicio B2 no configurado. Variables de entorno faltantes.' 
+      });
+    }
+
     const { key, contentType } = req.body;
     
     if (!isValidStorageKey(key)) {
@@ -216,7 +262,8 @@ app.post('/get-upload-url', async (req, res) => {
   } catch (error) {
     console.error('❌ Error generando URL:', error);
     res.status(500).json({
-      error: error.message || 'Error generando URL de subida'
+      error: error.message || 'Error generando URL de subida',
+      details: IS_PRODUCTION ? undefined : error.stack
     });
   }
 });

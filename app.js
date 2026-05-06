@@ -1293,8 +1293,25 @@ function selectStorage(fileSize) {
   const SUPABASE_MAX = 50 * 1024 * 1024; // 50 MB
   const B2_MAX = 500 * 1024 * 1024; // 500 MB
   
-  if (fileSize <= SUPABASE_MAX) return "supabase";
-  if (fileSize <= B2_MAX) return "b2";
+  // Siempre usar Supabase primero, independientemente del tamaño
+  // hasta que B2 esté configurado correctamente
+  if (fileSize <= SUPABASE_MAX) {
+    return "supabase";
+  }
+  
+  // Para archivos grandes, verificar si B2 está disponible
+  if (fileSize <= B2_MAX) {
+    // En desarrollo, verificar si el proxy está corriendo
+    if (window.location.hostname === 'localhost') {
+      console.warn('⚠️ Archivo >50MB detectado. Necesitas iniciar el proxy B2:');
+      console.warn('   npm run proxy');
+      console.warn('   O configura las credenciales B2 en .env.local');
+    }
+    
+    // Por ahora, rechazar archivos >50MB hasta que B2 esté configurado
+    throw new Error(`Archivo demasiado grande (${formatBytes(fileSize)}). Máximo actual: 50MB. Para archivos más grandes, configura Backblaze B2.`);
+  }
+  
   throw new Error(`Archivo demasiado grande. Máximo: 500MB (${formatBytes(fileSize)} recibido)`);
 }
 

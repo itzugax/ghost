@@ -370,8 +370,11 @@ function initLanguageButtonRobust() {
   langBtn.textContent = window.i18n.currentLang === 'es' ? 'EN' : 'ES';
   langBtn.title = window.i18n.currentLang === 'es' ? 'Switch to English' : 'Cambiar a Español';
   
-  // Agregar evento
-  langBtn.addEventListener('click', function(e) {
+  // Remover cualquier evento anterior (por si acaso)
+  langBtn.onclick = null;
+  
+  // Agregar evento con onclick directo (más confiable)
+  langBtn.onclick = function(e) {
     e.preventDefault();
     e.stopPropagation();
     
@@ -382,22 +385,47 @@ function initLanguageButtonRobust() {
     window.i18n.loadLanguage(newLang);
     
     // Actualizar botón inmediatamente
-    langBtn.textContent = newLang === 'es' ? 'EN' : 'ES';
-    langBtn.title = newLang === 'es' ? 'Switch to English' : 'Cambiar a Español';
+    this.textContent = newLang === 'es' ? 'EN' : 'ES';
+    this.title = newLang === 'es' ? 'Switch to English' : 'Cambiar a Español';
     
     console.log('🌐 Idioma cambiado a:', newLang);
-  });
+    
+    // Forzar actualización de toda la UI
+    setTimeout(() => {
+      window.i18n.updateUI();
+    }, 50);
+  };
   
-  console.log('🌐 Botón de idioma inicializado correctamente');
+  console.log('🌐 Botón de idioma inicializado correctamente en:', window.location.pathname);
 }
 
-// Inicializar cuando el DOM esté listo
+// Múltiples estrategias de inicialización para garantizar que funcione
+function initLanguageMultiple() {
+  console.log('🌐 Iniciando múltiples intentos de inicialización...');
+  
+  // Intento 1: Inmediato
+  initLanguageButtonRobust();
+  
+  // Intento 2: Después de 100ms
+  setTimeout(initLanguageButtonRobust, 100);
+  
+  // Intento 3: Después de 500ms
+  setTimeout(initLanguageButtonRobust, 500);
+  
+  // Intento 4: Después de 1 segundo
+  setTimeout(initLanguageButtonRobust, 1000);
+}
+
+// Inicializar según el estado del DOM
 if (document.readyState === 'loading') {
-  document.addEventListener('DOMContentLoaded', initLanguageButtonRobust);
+  document.addEventListener('DOMContentLoaded', initLanguageMultiple);
 } else {
   // DOM ya está listo
-  initLanguageButtonRobust();
+  initLanguageMultiple();
 }
 
-// También intentar después de un delay por si acaso
-setTimeout(initLanguageButtonRobust, 500);
+// También escuchar cuando la página se muestra (para navegación back/forward)
+window.addEventListener('pageshow', initLanguageMultiple);
+
+// Y cuando el window se carga completamente
+window.addEventListener('load', initLanguageMultiple);

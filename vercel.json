@@ -2,6 +2,30 @@
   "version": 2,
   "builds": [
     {
+      "src": "*.html",
+      "use": "@vercel/static"
+    },
+    {
+      "src": "*.css",
+      "use": "@vercel/static"
+    },
+    {
+      "src": "*.js",
+      "use": "@vercel/static"
+    },
+    {
+      "src": "*.svg",
+      "use": "@vercel/static"
+    },
+    {
+      "src": "*.json",
+      "use": "@vercel/static"
+    },
+    {
+      "src": "*.min.js",
+      "use": "@vercel/static"
+    },
+    {
       "src": "b2-proxy.js",
       "use": "@vercel/node"
     }
@@ -9,27 +33,27 @@
   "routes": [
     {
       "src": "/health",
-      "dest": "b2-proxy.js"
+      "dest": "/b2-proxy.js"
     },
     {
       "src": "/setup-cors",
-      "dest": "b2-proxy.js"
+      "dest": "/b2-proxy.js"
     },
     {
       "src": "/get-upload-url",
-      "dest": "b2-proxy.js"
+      "dest": "/b2-proxy.js"
     },
     {
       "src": "/upload",
-      "dest": "b2-proxy.js"
+      "dest": "/b2-proxy.js"
     },
     {
       "src": "/download/(.*)",
-      "dest": "b2-proxy.js"
+      "dest": "/b2-proxy.js"
     },
     {
       "src": "/delete/(.*)",
-      "dest": "b2-proxy.js"
+      "dest": "/b2-proxy.js"
     }
   ]
 }

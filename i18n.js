@@ -415,41 +415,138 @@ window.i18n = {
     const langBtn = document.getElementById('lang-btn');
     if (langBtn) {
       langBtn.dataset.i18nConfigured = 'false';
+      langBtn.removeAttribute('data-i18n-configured');
     }
-    initI18n();
+    return forceInitUntilWorks();
   }
 };
 
-// ─── Auto-inicialización ───────────────────────────────────
+// ─── Auto-inicialización AGRESIVA ──────────────────────────
 
-// Inicializar inmediatamente si el DOM está listo
-if (document.readyState === 'loading') {
-  document.addEventListener('DOMContentLoaded', initI18n);
-} else {
-  initI18n();
+// Función que se ejecuta múltiples veces hasta que funcione
+function forceInitUntilWorks() {
+  const langBtn = document.getElementById('lang-btn');
+  
+  if (!langBtn) {
+    console.log('🌐 Botón no encontrado, reintentando...');
+    return false;
+  }
+  
+  if (langBtn.dataset.i18nConfigured === 'true') {
+    console.log('🌐 Botón ya configurado');
+    return true;
+  }
+  
+  try {
+    // Detectar y aplicar idioma
+    const lang = detectLanguage();
+    applyTranslations(lang);
+    
+    // Configurar botón de forma agresiva
+    langBtn.replaceWith(langBtn.cloneNode(true));
+    const newLangBtn = document.getElementById('lang-btn');
+    
+    if (!newLangBtn) {
+      console.warn('🌐 Error clonando botón');
+      return false;
+    }
+    
+    // Marcar como configurado ANTES de agregar evento
+    newLangBtn.dataset.i18nConfigured = 'true';
+    
+    // Agregar evento con múltiples métodos
+    const clickHandler = function(e) {
+      e.preventDefault();
+      e.stopPropagation();
+      console.log('🌐 ¡Click detectado! Cambiando idioma...');
+      toggleLanguage();
+    };
+    
+    // Método 1: addEventListener
+    newLangBtn.addEventListener('click', clickHandler);
+    
+    // Método 2: onclick como backup
+    newLangBtn.onclick = clickHandler;
+    
+    // Método 3: Verificar que el evento se agregó
+    setTimeout(() => {
+      if (newLangBtn.onclick || newLangBtn.addEventListener) {
+        console.log('✅ Botón de idioma configurado exitosamente');
+      } else {
+        console.warn('⚠️ Problema configurando evento');
+      }
+    }, 100);
+    
+    return true;
+    
+  } catch (error) {
+    console.error('❌ Error configurando botón:', error);
+    return false;
+  }
 }
 
-// Múltiples reintentos para asegurar que funcione
-setTimeout(() => {
-  const langBtn = document.getElementById('lang-btn');
-  if (langBtn && !langBtn.dataset.i18nConfigured) {
-    console.log('🌐 Reintentando inicialización (1s)...');
-    initI18n();
+// Ejecutar inmediatamente
+forceInitUntilWorks();
+
+// Ejecutar cuando DOM esté listo
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', forceInitUntilWorks);
+} else {
+  forceInitUntilWorks();
+}
+
+// Reintentos agresivos cada segundo hasta que funcione
+let retryCount = 0;
+const maxRetries = 10;
+
+const retryInterval = setInterval(() => {
+  retryCount++;
+  
+  if (retryCount > maxRetries) {
+    console.warn('🌐 Máximo de reintentos alcanzado');
+    clearInterval(retryInterval);
+    return;
+  }
+  
+  const success = forceInitUntilWorks();
+  if (success) {
+    console.log(`✅ Botón configurado exitosamente en intento ${retryCount}`);
+    clearInterval(retryInterval);
+  } else {
+    console.log(`🔄 Reintento ${retryCount}/${maxRetries}...`);
   }
 }, 1000);
 
-setTimeout(() => {
-  const langBtn = document.getElementById('lang-btn');
-  if (langBtn && !langBtn.dataset.i18nConfigured) {
-    console.log('🌐 Reintentando inicialización (2s)...');
-    initI18n();
-  }
-}, 2000);
+// También ejecutar en eventos de ventana
+window.addEventListener('load', forceInitUntilWorks);
+window.addEventListener('focus', forceInitUntilWorks);
 
-setTimeout(() => {
+// Observador de mutaciones para detectar cuando se agrega el botón
+if (typeof MutationObserver !== 'undefined') {
+  const observer = new MutationObserver((mutations) => {
+    mutations.forEach((mutation) => {
+      if (mutation.type === 'childList') {
+        mutation.addedNodes.forEach((node) => {
+          if (node.nodeType === 1 && (node.id === 'lang-btn' || node.querySelector('#lang-btn'))) {
+            console.log('🌐 Botón detectado por MutationObserver');
+            setTimeout(forceInitUntilWorks, 100);
+          }
+        });
+      }
+    });
+  });
+  
+  observer.observe(document.body, {
+    childList: true,
+    subtree: true
+  });
+}
+
+// Sistema de auto-reparación: verificar cada 5 segundos si el botón funciona
+setInterval(() => {
   const langBtn = document.getElementById('lang-btn');
-  if (langBtn && !langBtn.dataset.i18nConfigured) {
-    console.log('🌐 Reintentando inicialización (3s)...');
-    initI18n();
+  if (langBtn && langBtn.dataset.i18nConfigured !== 'true') {
+    console.log('🔧 Auto-reparación: botón no configurado, arreglando...');
+    forceInitUntilWorks();
   }
-}, 3000);
+}, 5000);

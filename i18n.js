@@ -382,7 +382,11 @@ function initLanguageButtonRobust() {
     
     // Cambiar idioma
     const newLang = window.i18n.currentLang === 'es' ? 'en' : 'es';
-    window.i18n.loadLanguage(newLang);
+    
+    // Actualizar el idioma en la instancia
+    window.i18n.currentLang = newLang;
+    localStorage.setItem('ghostdrop-lang', newLang);
+    document.documentElement.lang = newLang;
     
     // Actualizar botón inmediatamente
     this.textContent = newLang === 'es' ? 'EN' : 'ES';
@@ -390,10 +394,26 @@ function initLanguageButtonRobust() {
     
     console.log('🌐 Idioma cambiado a:', newLang);
     
-    // Forzar actualización de toda la UI
+    // FORZAR actualización completa de la UI
+    console.log('🌐 Actualizando UI...');
+    window.i18n.updateUI();
+    
+    // Doble verificación: actualizar elementos específicos
     setTimeout(() => {
-      window.i18n.updateUI();
-    }, 50);
+      document.querySelectorAll('[data-i18n]').forEach(el => {
+        const key = el.dataset.i18n;
+        const text = window.i18n.t(key);
+        
+        if (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA') {
+          el.placeholder = text;
+        } else if (el.dataset.i18nHtml) {
+          el.innerHTML = text;
+        } else {
+          el.textContent = text;
+        }
+      });
+      console.log('🌐 UI actualizada completamente');
+    }, 100);
   };
   
   console.log('🌐 Botón de idioma inicializado correctamente en:', window.location.pathname);

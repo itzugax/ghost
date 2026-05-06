@@ -3,8 +3,8 @@
  * Se comunica con el servidor proxy local
  */
 
-// URL del servidor proxy local
-const PROXY_URL = 'http://localhost:3001';
+// URL del servidor proxy (en producción usa Vercel serverless routes)
+const PROXY_URL = window.location.origin;
 
 /**
  * Sube archivo a Backblaze B2 a través del proxy con progreso

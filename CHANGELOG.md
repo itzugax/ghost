@@ -1,5 +1,25 @@
 # 📝 Changelog
 
+## [3.6.0] - 2026-05-06
+
+### 🚀 Mejoras Principales
+- **Botón de idioma arreglado**: Funciona al primer click en todas las páginas (landing, app, privacidad, términos)
+- **Progreso B2 mejorado**: Barra de progreso visual durante descargas de Backblaze B2
+- **Sin silencios**: Feedback continuo durante descarga → descifrado → completado
+- **Múltiples estrategias**: Inicialización robusta que funciona en cualquier timing de carga
+
+### 🔧 Correcciones Técnicas
+- **Eliminados botones duplicados**: Todas las páginas HTML tenían IDs duplicados que causaban conflictos
+- **Scope de variables arreglado**: Error "progressEl is not defined" solucionado
+- **Event listeners limpios**: Sin duplicados, usando onclick directo para mayor confiabilidad
+- **Timers de respaldo**: Progreso garantizado incluso si los callbacks fallan
+
+### 🌐 Internacionalización
+- **Inicialización múltiple**: DOMContentLoaded, pageshow, load events
+- **Prevención de duplicados**: Sistema robusto que evita múltiples inicializaciones
+- **Logs de debugging**: Visibilidad completa del proceso de cambio de idioma
+- **Actualización forzada**: UI se refresca correctamente después del cambio
+
 ## [3.3.0] - 2026-04-28
 
 ### 🔥 Nuevas Features

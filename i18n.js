@@ -1,5 +1,5 @@
 // ============================================================
-// GHOST-DROP — Internacionalización (i18n)
+// GHOST-DROP — Internacionalización (i18n) — v3.6
 // ============================================================
 
 const translations = {

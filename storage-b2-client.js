@@ -168,11 +168,12 @@ export async function uploadToB2(blob, fileName, onProgress = null) {
 }
 
 /**
- * Descarga archivo desde Backblaze B2
+ * Descarga archivo desde Backblaze B2 con progreso visual
  * @param {string} key - Clave del archivo en B2
+ * @param {Function} onProgress - Callback para progreso (loaded, total, percent)
  * @returns {Promise<Blob>}
  */
-export async function downloadFromB2(key) {
+export async function downloadFromB2(key, onProgress = null) {
   try {
     console.log(`📥 Descargando de B2: ${key}`);
     
@@ -203,6 +204,8 @@ export async function downloadFromB2(key) {
     const reader = response.body.getReader();
     const chunks = [];
     let loaded = 0;
+    let lastProgressTime = Date.now();
+    const startTime = Date.now();
     
     console.log(`📊 Descargando archivo de ${total ? formatBytes(total) : 'tamaño desconocido'}...`);
     
@@ -214,14 +217,34 @@ export async function downloadFromB2(key) {
       chunks.push(value);
       loaded += value.length;
       
-      // Mostrar progreso cada 1MB descargado
-      if (total && loaded % (1024 * 1024) === 0) {
-        const percent = Math.round((loaded / total) * 100);
-        console.log(`📥 Descargado: ${formatBytes(loaded)} / ${formatBytes(total)} (${percent}%)`);
+      // Calcular progreso y velocidad
+      const now = Date.now();
+      const elapsed = (now - startTime) / 1000;
+      const speed = loaded / elapsed;
+      const percent = total ? Math.round((loaded / total) * 100) : 0;
+      
+      // Actualizar progreso cada 500ms o cada 1MB
+      if (now - lastProgressTime > 500 || loaded % (1024 * 1024) < value.length) {
+        lastProgressTime = now;
+        
+        // Callback para UI
+        if (onProgress) {
+          onProgress(loaded, total, percent, speed);
+        }
+        
+        // Log detallado
+        if (total) {
+          const remaining = (total - loaded) / speed;
+          console.log(`📥 Descarga B2: ${formatBytes(loaded)}/${formatBytes(total)} (${percent}%) - ${formatSpeed(speed)} - ETA: ${formatTime(remaining)}`);
+        } else {
+          console.log(`📥 Descarga B2: ${formatBytes(loaded)} - ${formatSpeed(speed)}`);
+        }
       }
     }
     
-    console.log(`✅ Descarga B2 completada: ${formatBytes(loaded)}`);
+    const totalTime = (Date.now() - startTime) / 1000;
+    const avgSpeed = loaded / totalTime;
+    console.log(`✅ Descarga B2 completada: ${formatBytes(loaded)} en ${totalTime.toFixed(1)}s (${formatSpeed(avgSpeed)} promedio)`);
     
     // Combinar todos los chunks en un blob
     const blob = new Blob(chunks);
@@ -231,6 +254,19 @@ export async function downloadFromB2(key) {
     console.error('❌ Error descargando de B2:', error);
     throw new Error(`No se pudo descargar el archivo de Backblaze B2: ${error.message}`);
   }
+}
+
+// Helper functions para formateo
+function formatSpeed(bytesPerSecond) {
+  if (bytesPerSecond < 1024) return bytesPerSecond.toFixed(0) + " B/s";
+  if (bytesPerSecond < 1048576) return (bytesPerSecond / 1024).toFixed(1) + " KB/s";
+  return (bytesPerSecond / 1048576).toFixed(1) + " MB/s";
+}
+
+function formatTime(seconds) {
+  if (seconds < 60) return Math.ceil(seconds) + "s";
+  if (seconds < 3600) return Math.ceil(seconds / 60) + "m";
+  return Math.ceil(seconds / 3600) + "h";
 }
 
 // Helper function para formatear bytes (si no existe)

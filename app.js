@@ -1588,11 +1588,54 @@ async function downloadAndDestroy(storagePath, dropId, fileName, contentType = "
     let data;
     
     if (storage === "b2") {
-      // Descargar de Backblaze B2 con progreso mejorado
-      showToast(`Descargando de B2: ${fileName}`, "info");
+      // Descargar de Backblaze B2 con progreso visual mejorado
+      showToast(`Iniciando descarga B2: ${fileName}`, "info");
       console.log(`📥 Iniciando descarga B2: ${fileName}`);
       
-      data = await downloadFromB2(b2Key || storagePath);
+      // Mostrar barra de progreso para archivos B2
+      const progressEl = document.getElementById('progress-bar');
+      const progressWrap = document.getElementById('progress-wrap');
+      const progressLabel = document.getElementById('progress-label');
+      if (progressEl && progressWrap) {
+        progressWrap.classList.remove('hidden');
+        progressEl.style.width = '0%';
+        progressEl.textContent = 'Conectando...';
+        if (progressLabel) {
+          progressLabel.textContent = 'Iniciando descarga desde Backblaze B2...';
+        }
+      }
+      
+      data = await downloadFromB2(b2Key || storagePath, (loaded, total, percent, speed) => {
+        // Actualizar barra de progreso visual
+        if (progressEl) {
+          progressEl.style.width = `${percent}%`;
+          if (total && speed) {
+            const remaining = (total - loaded) / speed;
+            progressEl.textContent = `${percent}%`;
+            if (progressLabel) {
+              progressLabel.textContent = `${formatBytes(loaded)} de ${formatBytes(total)} - ${formatSpeed(speed)} - ${formatTime(remaining)} restante`;
+            }
+          } else {
+            progressEl.textContent = `${formatBytes(loaded)}`;
+            if (progressLabel) {
+              progressLabel.textContent = `Descargado: ${formatBytes(loaded)} - ${formatSpeed(speed || 0)}`;
+            }
+          }
+        }
+        
+        // Actualizar toast con progreso menos frecuente
+        if (percent > 0 && percent % 10 === 0) {
+          showToast(`Descargando: ${percent}% (${formatSpeed(speed || 0)})`, "info");
+        }
+      });
+      
+      // Ocultar barra de progreso
+      if (progressWrap) {
+        progressWrap.classList.add('hidden');
+      }
+      if (progressLabel) {
+        progressLabel.textContent = '';
+      }
       
       const downloadTime = ((Date.now() - startTime) / 1000).toFixed(1);
       console.log(`✅ Descarga B2 completada en ${downloadTime}s`);
@@ -1677,6 +1720,16 @@ async function downloadAndDestroy(storagePath, dropId, fileName, contentType = "
     }
 
   } catch (e) {
+    // Ocultar barra de progreso en caso de error
+    const progressWrap = document.getElementById('progress-wrap');
+    const progressLabel = document.getElementById('progress-label');
+    if (progressWrap) {
+      progressWrap.classList.add('hidden');
+    }
+    if (progressLabel) {
+      progressLabel.textContent = '';
+    }
+    
     console.error('❌ Error en descarga:', e);
     showToast(`Error descargando: ${e.message}`, "error");
   }

@@ -1,0 +1,52 @@
+{
+  "functions": {
+    "api/b2-proxy.js": {
+      "maxDuration": 300
+    }
+  },
+  "rewrites": [
+    {
+      "source": "/health",
+      "destination": "/api/b2-proxy"
+    },
+    {
+      "source": "/get-upload-url",
+      "destination": "/api/b2-proxy"
+    },
+    {
+      "source": "/upload",
+      "destination": "/api/b2-proxy"
+    },
+    {
+      "source": "/download/(.*)",
+      "destination": "/api/b2-proxy"
+    },
+    {
+      "source": "/delete/(.*)",
+      "destination": "/api/b2-proxy"
+    },
+    {
+      "source": "/setup-cors",
+      "destination": "/api/b2-proxy"
+    }
+  ],
+  "headers": [
+    {
+      "source": "/(.*)",
+      "headers": [
+        {
+          "key": "X-Content-Type-Options",
+          "value": "nosniff"
+        },
+        {
+          "key": "X-Frame-Options",
+          "value": "DENY"
+        },
+        {
+          "key": "Referrer-Policy",
+          "value": "no-referrer"
+        }
+      ]
+    }
+  ]
+}

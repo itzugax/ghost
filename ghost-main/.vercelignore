@@ -1,0 +1,16 @@
+# Archivos que NO se deben desplegar a Vercel
+
+# Node modules
+node_modules/
+
+# Development files
+.vscode/
+.env.local
+.env
+
+# Test artifacts (if any remain)
+playwright-report/
+test-results/
+
+# Personal dev notes (already cleaned, but keep ignore for future)
+*.sql

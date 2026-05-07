@@ -460,10 +460,6 @@ header {
   animation: progress-glow 1.2s ease-in-out infinite;
 }
 
-#progress-bar.progress-download {
-  background: var(--success);
-}
-
 @keyframes progress-glow {
   0%, 100% { box-shadow: 0 0 4px var(--accent), 0 0 8px var(--accent); opacity: 1; }
   50%       { box-shadow: 0 0 12px var(--accent), 0 0 24px var(--accent-light); opacity: 0.85; }
@@ -1060,6 +1056,30 @@ footer {
 @keyframes toast-in {
   from { opacity: 0; transform: translateX(-50%) translateY(12px) scale(0.9); }
   to   { opacity: 1; transform: translateX(-50%) translateY(0) scale(1); }
+}
+
+/* ─── Toast progress bar ──────────────────────────────────── */
+.toast:has(.toast-progress:not(.hidden)) {
+  border-radius: var(--radius-md);
+  white-space: normal;
+  min-width: 260px;
+  padding: 0.75rem 1.25rem;
+}
+
+.toast-progress {
+  margin-top: 0.5rem;
+  height: 4px;
+  background: rgba(255,255,255,0.2);
+  border-radius: 100px;
+  overflow: hidden;
+}
+
+.toast-progress-bar {
+  height: 100%;
+  background: #fff;
+  border-radius: 100px;
+  width: 0%;
+  transition: width 0.2s ease-out;
 }
 
 /* ─── Timer blink últimos 10s ────────────────────────────── */

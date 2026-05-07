@@ -695,12 +695,28 @@ function animateExpire(fileId, mode = "normal") {
 
 
 let toastTimer = null;
+const toastText = document.getElementById("toast-text");
+const toastProgress = document.getElementById("toast-progress");
+const toastProgressBar = document.getElementById("toast-progress-bar");
+
 function showToast(msg, type = "info", duration = 3000) {
-  toastEl.textContent = msg;
+  hideToastProgress();
+  toastText.textContent = msg;
   toastEl.className   = `toast toast-${type}`;
   toastEl.classList.remove("hidden");
   clearTimeout(toastTimer);
   toastTimer = setTimeout(() => toastEl.classList.add("hidden"), duration);
+}
+
+function showToastProgress(pct, loaded, total) {
+  toastProgress.classList.remove("hidden");
+  toastProgressBar.style.width = Math.min(100, Math.max(0, pct)) + "%";
+  toastText.textContent = `Descargando: ${formatBytes(loaded)} / ${formatBytes(total)}`;
+}
+
+function hideToastProgress() {
+  toastProgress.classList.add("hidden");
+  toastProgressBar.style.width = "0%";
 }
 
 // Helper para mensajes traducidos
@@ -1584,37 +1600,23 @@ async function sendText() {
 async function downloadAndDestroy(storagePath, dropId, fileName, contentType = "application/octet-stream", burnAfterReading = false, storage = "supabase", b2Key = null) {
   const startTime = Date.now();
   
-  const progressBar = document.getElementById('progress-bar');
-  const progressWrap = document.getElementById('progress-wrap');
-  const progressLabel = document.getElementById('progress-label');
-  
-  // Mostrar barra de progreso
-  progressWrap.style.display = "block";
-  progressBar.classList.remove("progress-indeterminate", "progress-pulse", "progress-download");
-  progressBar.style.width = "0%";
-  progressBar.style.transition = "none";
-  progressBar.classList.add("progress-download");
-  setProgressLabel(0, 0);
-  document.getElementById("progress-label").textContent = "Descargando…";
+  showToast("Descargando…", "info", 86400000); // toast duradero mientras descarga
   
   try {
     let data;
     
     if (storage === "b2") {
-      showToast(`Iniciando descarga B2: ${fileName}`, "info");
+      showToast("Descargando…", "info", 86400000);
       
       data = await downloadFromB2(b2Key || storagePath, (loaded, total, percent, speed) => {
-        progressBar.style.transition = "width 0.2s ease-out";
-        progressBar.style.width = percent + "%";
-        setProgressLabel(loaded, total, speed);
-        document.getElementById("progress-label").textContent = `Descargando: ${formatBytes(loaded)} / ${formatBytes(total)}`;
+        showToastProgress(percent, loaded, total);
       });
       
+      hideToastProgress();
       const downloadTime = ((Date.now() - startTime) / 1000).toFixed(1);
       console.log(`✅ Descarga B2 completada en ${downloadTime}s`);
       
     } else {
-      // Descargar de Supabase con XHR para progreso real
       const downloadUrl = `${window.SUPABASE_URL}/storage/v1/object/ghost-drop/${storagePath}`;
 
       data = await new Promise((resolve, reject) => {
@@ -1626,9 +1628,7 @@ async function downloadAndDestroy(storagePath, dropId, fileName, contentType = "
         xhr.addEventListener("progress", (e) => {
           if (!e.lengthComputable) return;
           const pct = (e.loaded / e.total) * 100;
-          progressBar.style.transition = "width 0.2s ease-out";
-          progressBar.style.width = pct + "%";
-          document.getElementById("progress-label").textContent = `Descargando: ${formatBytes(e.loaded)} / ${formatBytes(e.total)}`;
+          showToastProgress(pct, e.loaded, e.total);
         });
 
         xhr.addEventListener("load", () => {
@@ -1643,28 +1643,21 @@ async function downloadAndDestroy(storagePath, dropId, fileName, contentType = "
 
         xhr.send();
       });
+      hideToastProgress();
     }
 
     // Descifrar
-    progressBar.classList.remove("progress-download");
-    progressBar.classList.add("progress-pulse");
-    document.getElementById("progress-label").textContent = "Descifrando…";
+    showToast("Descifrando…", "info", 86400000);
     
     let decryptedBlob;
     try {
       decryptedBlob = await decryptFile(data, roomId, contentType);
     } catch (err) {
-      progressWrap.style.display = "none";
-      setProgressLabel(0, 0);
       showToast(`Error descifrando: ${err.message}`, "error");
       return;
     }
 
     // Guardar archivo
-    progressBar.classList.remove("progress-pulse");
-    progressBar.style.width = "100%";
-    document.getElementById("progress-label").textContent = "Guardando archivo…";
-
     const url = URL.createObjectURL(decryptedBlob);
     const a = document.createElement("a");
     a.href = url;
@@ -1680,10 +1673,6 @@ async function downloadAndDestroy(storagePath, dropId, fileName, contentType = "
     haptic([10, 50, 10]);
     recordDownload(fileName, roomId);
 
-    progressWrap.style.display = "none";
-    setProgressLabel(0, 0);
-
-    // Si es burn after reading, borrar inmediatamente
     if (burnAfterReading) {
       showToast("Eliminando archivo (burn after reading)…", "info");
       burnedDropIds.add(dropId);
@@ -1716,8 +1705,7 @@ async function downloadAndDestroy(storagePath, dropId, fileName, contentType = "
     }
 
   } catch (e) {
-    progressWrap.style.display = "none";
-    setProgressLabel(0, 0);
+    hideToastProgress();
     console.error('❌ Error en descarga:', e);
     showToast(`Error descargando: ${e.message}`, "error");
   }

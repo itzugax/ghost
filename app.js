@@ -710,8 +710,12 @@ function showToast(msg, type = "info", duration = 3000) {
 
 function showToastProgress(pct, loaded, total) {
   toastProgress.classList.remove("hidden");
-  toastProgressBar.style.width = Math.min(100, Math.max(0, pct)) + "%";
-  toastText.textContent = `Descargando: ${formatBytes(loaded)} / ${formatBytes(total)}`;
+  if (total > 0) {
+    toastProgressBar.style.width = Math.min(100, Math.max(0, pct)) + "%";
+    toastText.textContent = `Descargando: ${formatBytes(loaded)} / ${formatBytes(total)}`;
+  } else {
+    toastText.textContent = `Descargando: ${formatBytes(loaded)}…`;
+  }
 }
 
 function hideToastProgress() {
@@ -1039,6 +1043,7 @@ function buildDropEl(f) {
           data-id="${f.id}"
           data-name="${f.file_name}"
           data-type="${f.content_type || 'application/octet-stream'}"
+          data-size="${f.file_size || 0}"
           data-burn="${f.burn_after_reading || false}"
           data-storage="${f.storage || 'supabase'}"
           data-b2-key="${f.b2_key || ''}">↓</button>
@@ -1070,7 +1075,8 @@ function attachDropEvents(container) {
         btn.dataset.type,
         btn.dataset.burn === "true",
         btn.dataset.storage || "supabase",
-        btn.dataset.b2Key || null
+        btn.dataset.b2key || null,
+        parseInt(btn.dataset.size) || 0
       );
     });
   });
@@ -1597,7 +1603,7 @@ async function sendText() {
 
 // ─── Download ──────────────────────────────────────────────
 
-async function downloadAndDestroy(storagePath, dropId, fileName, contentType = "application/octet-stream", burnAfterReading = false, storage = "supabase", b2Key = null) {
+async function downloadAndDestroy(storagePath, dropId, fileName, contentType = "application/octet-stream", burnAfterReading = false, storage = "supabase", b2Key = null, fileSize = 0) {
   const startTime = Date.now();
   
   showToast("Descargando…", "info", 86400000); // toast duradero mientras descarga
@@ -1609,7 +1615,7 @@ async function downloadAndDestroy(storagePath, dropId, fileName, contentType = "
       showToast("Descargando…", "info", 86400000);
       
       data = await downloadFromB2(b2Key || storagePath, (loaded, total, percent, speed) => {
-        showToastProgress(percent, loaded, total);
+        showToastProgress(percent, loaded, total || fileSize);
       });
       
       hideToastProgress();
@@ -1626,9 +1632,13 @@ async function downloadAndDestroy(storagePath, dropId, fileName, contentType = "
         xhr.responseType = "blob";
 
         xhr.addEventListener("progress", (e) => {
-          if (!e.lengthComputable) return;
-          const pct = (e.loaded / e.total) * 100;
-          showToastProgress(pct, e.loaded, e.total);
+          const total = e.lengthComputable && e.total > 0 ? e.total : fileSize;
+          if (!total) {
+            if (e.loaded) toastText.textContent = `Descargando: ${formatBytes(e.loaded)}…`;
+            return;
+          }
+          const pct = (e.loaded / total) * 100;
+          showToastProgress(pct, e.loaded, total);
         });
 
         xhr.addEventListener("load", () => {

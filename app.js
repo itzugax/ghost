@@ -1584,92 +1584,87 @@ async function sendText() {
 async function downloadAndDestroy(storagePath, dropId, fileName, contentType = "application/octet-stream", burnAfterReading = false, storage = "supabase", b2Key = null) {
   const startTime = Date.now();
   
-  // Definir elementos de progreso al inicio para que estén disponibles en todo el scope
-  const progressEl = document.getElementById('progress-bar');
+  const progressBar = document.getElementById('progress-bar');
   const progressWrap = document.getElementById('progress-wrap');
   const progressLabel = document.getElementById('progress-label');
-  let fallbackTimer = null;
+  
+  // Mostrar barra de progreso
+  progressWrap.style.display = "block";
+  progressBar.classList.remove("progress-indeterminate", "progress-pulse", "progress-download");
+  progressBar.style.width = "0%";
+  progressBar.style.transition = "none";
+  progressBar.classList.add("progress-download");
+  setProgressLabel(0, 0);
+  document.getElementById("progress-label").textContent = "Descargando…";
   
   try {
     let data;
     
     if (storage === "b2") {
-      // Descargar de Backblaze B2 con progreso en toasts (NO en área de drag)
       showToast(`Iniciando descarga B2: ${fileName}`, "info");
-      console.log(`📥 Iniciando descarga B2: ${fileName}`);
-      
-      // NO mostrar barra de progreso en área de drag
-      // El progreso se mostrará solo en toasts
       
       data = await downloadFromB2(b2Key || storagePath, (loaded, total, percent, speed) => {
-        console.log(`📊 Progreso B2: ${loaded} bytes, ${percent}%, ${formatSpeed(speed || 0)}`);
-        
-        // Mostrar progreso en toasts cada 10% con duración de 5 segundos
-        if (percent > 0 && (percent === 10 || percent === 20 || percent === 30 || percent === 40 || percent === 50 || percent === 60 || percent === 70 || percent === 80 || percent === 90)) {
-          showToast(`📥 Descargando: ${percent}% (${formatBytes(loaded)} de ${formatBytes(total)})`, "info", 5000);
-        }
+        progressBar.style.transition = "width 0.2s ease-out";
+        progressBar.style.width = percent + "%";
+        setProgressLabel(loaded, total, speed);
+        document.getElementById("progress-label").textContent = `Descargando: ${formatBytes(loaded)} / ${formatBytes(total)}`;
       });
-      
-      // Limpiar fallback timer (ya no se usa)
-      if (fallbackTimer) {
-        clearInterval(fallbackTimer);
-        fallbackTimer = null;
-      }
       
       const downloadTime = ((Date.now() - startTime) / 1000).toFixed(1);
       console.log(`✅ Descarga B2 completada en ${downloadTime}s`);
       
     } else {
-      // Descargar de Supabase (más rápido)
-      showToast(`Descargando: ${fileName}`, "info");
-      
-      const { data: supabaseData, error } = await db.storage
-        .from("ghost-drop")
-        .download(storagePath);
+      // Descargar de Supabase con XHR para progreso real
+      const downloadUrl = `${window.SUPABASE_URL}/storage/v1/object/ghost-drop/${storagePath}`;
 
-      if (error || !supabaseData) {
-        showToast(`Error: ${error?.message ?? "Sin datos"}`, "error");
-        return;
-      }
-      data = supabaseData;
+      data = await new Promise((resolve, reject) => {
+        const xhr = new XMLHttpRequest();
+        xhr.open("GET", downloadUrl);
+        xhr.setRequestHeader("Authorization", `Bearer ${window.SUPABASE_ANON_KEY}`);
+        xhr.responseType = "blob";
+
+        xhr.addEventListener("progress", (e) => {
+          if (!e.lengthComputable) return;
+          const pct = (e.loaded / e.total) * 100;
+          progressBar.style.transition = "width 0.2s ease-out";
+          progressBar.style.width = pct + "%";
+          document.getElementById("progress-label").textContent = `Descargando: ${formatBytes(e.loaded)} / ${formatBytes(e.total)}`;
+        });
+
+        xhr.addEventListener("load", () => {
+          if (xhr.status >= 200 && xhr.status < 300) {
+            resolve(xhr.response);
+          } else {
+            reject(new Error(`HTTP ${xhr.status}`));
+          }
+        });
+        xhr.addEventListener("error", () => reject(new Error("Error de red")));
+        xhr.addEventListener("abort", () => reject(new Error("Descarga cancelada")));
+
+        xhr.send();
+      });
     }
 
-    // Descifrar el archivo
-    console.log(`🔐 Iniciando descifrado: ${fileName}`);
-    
-    // Mostrar progreso de descifrado en toast (NO en área de drag)
-    showToast("Descifrando archivo…", "info");
+    // Descifrar
+    progressBar.classList.remove("progress-download");
+    progressBar.classList.add("progress-pulse");
+    document.getElementById("progress-label").textContent = "Descifrando…";
     
     let decryptedBlob;
-    let decryptTimer = null;
     try {
-      const decryptStart = Date.now();
-      
-      // Para archivos grandes, mostrar progreso de descifrado en toasts
-      if (storage === "b2" && data.size > 10 * 1024 * 1024) {
-        let decryptProgress = 0;
-        decryptTimer = setInterval(() => {
-          decryptProgress = Math.min(95, decryptProgress + 5);
-          showToast(`Descifrando: ${decryptProgress}%`, "info");
-        }, 500);
-      }
-      
       decryptedBlob = await decryptFile(data, roomId, contentType);
-      if (decryptTimer) {
-        clearInterval(decryptTimer);
-        decryptTimer = null;
-      }
-      
-      const decryptTime = ((Date.now() - decryptStart) / 1000).toFixed(1);
-      console.log(`✅ Descifrado completado en ${decryptTime}s`);
     } catch (err) {
-      if (decryptTimer) clearInterval(decryptTimer);
+      progressWrap.style.display = "none";
+      setProgressLabel(0, 0);
       showToast(`Error descifrando: ${err.message}`, "error");
       return;
     }
 
-    // Crear URL y descargar
-    showToast("Preparando descarga…", "info");
+    // Guardar archivo
+    progressBar.classList.remove("progress-pulse");
+    progressBar.style.width = "100%";
+    document.getElementById("progress-label").textContent = "Guardando archivo…";
+
     const url = URL.createObjectURL(decryptedBlob);
     const a = document.createElement("a");
     a.href = url;
@@ -1684,9 +1679,10 @@ async function downloadAndDestroy(storagePath, dropId, fileName, contentType = "
 
     haptic([10, 50, 10]);
     recordDownload(fileName, roomId);
-    
-    // Ya no hay barra de progreso que ocultar
-    
+
+    progressWrap.style.display = "none";
+    setProgressLabel(0, 0);
+
     // Si es burn after reading, borrar inmediatamente
     if (burnAfterReading) {
       showToast("Eliminando archivo (burn after reading)…", "info");
@@ -1720,9 +1716,8 @@ async function downloadAndDestroy(storagePath, dropId, fileName, contentType = "
     }
 
   } catch (e) {
-    // Limpiar timers en caso de error
-    if (fallbackTimer) clearInterval(fallbackTimer);
-    
+    progressWrap.style.display = "none";
+    setProgressLabel(0, 0);
     console.error('❌ Error en descarga:', e);
     showToast(`Error descargando: ${e.message}`, "error");
   }

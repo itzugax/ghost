@@ -460,6 +460,10 @@ header {
   animation: progress-glow 1.2s ease-in-out infinite;
 }
 
+#progress-bar.progress-download {
+  background: var(--success);
+}
+
 @keyframes progress-glow {
   0%, 100% { box-shadow: 0 0 4px var(--accent), 0 0 8px var(--accent); opacity: 1; }
   50%       { box-shadow: 0 0 12px var(--accent), 0 0 24px var(--accent-light); opacity: 0.85; }

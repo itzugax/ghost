@@ -95,13 +95,27 @@ app.use(express.json({ limit: '1mb' }));
 app.use(rateLimitMiddleware);
 app.use(authMiddleware);
 
-// CORS estricto en producción cuando se define B2_ALLOWED_ORIGINS
+// CORS más permisivo para descargas
 app.use(cors({
   origin(origin, callback) {
+    // Siempre permitir requests sin origin (como fetch directo)
     if (!origin) return callback(null, true);
+    
+    // En desarrollo, permitir todo
     if (!IS_PRODUCTION) return callback(null, true);
-    if (allowedOrigins.length === 0) return callback(new Error('Origin not allowed by CORS'));
-    if (allowedOrigins.includes(origin)) return callback(null, true);
+    
+    // En producción, si no hay origins configurados, permitir todo
+    if (allowedOrigins.length === 0) {
+      console.log('⚠️ No hay B2_ALLOWED_ORIGINS configurado, permitiendo todos los orígenes');
+      return callback(null, true);
+    }
+    
+    // Si hay origins configurados, verificar
+    if (allowedOrigins.includes(origin)) {
+      return callback(null, true);
+    }
+    
+    console.warn(`❌ Origin bloqueado por CORS: ${origin}`);
     return callback(new Error('Origin not allowed by CORS'));
   },
   methods: ['GET', 'POST', 'DELETE', 'OPTIONS'],
@@ -357,11 +371,21 @@ app.post('/upload', upload.single('file'), async (req, res) => {
 app.get('/download/:key', async (req, res) => {
   try {
     const { key } = req.params;
+    
+    console.log(`📥 Solicitud de descarga: ${key}`);
+    
     if (!isValidStorageKey(key)) {
+      console.error(`❌ Key inválida: ${key}`);
       return res.status(400).json({ error: 'Invalid key format' });
     }
 
+    if (!s3Client) {
+      console.error('❌ Cliente S3 no inicializado');
+      return res.status(503).json({ error: 'Servicio B2 no disponible' });
+    }
+
     console.log(`📥 Descargando archivo de B2: ${key}`);
+    console.log(`   Bucket: ${process.env.B2_BUCKET_NAME}`);
 
     const command = new GetObjectCommand({
       Bucket: process.env.B2_BUCKET_NAME,
@@ -370,47 +394,60 @@ app.get('/download/:key', async (req, res) => {
 
     const response = await s3Client.send(command);
 
+    console.log(`✅ Archivo encontrado en B2`);
+    console.log(`   Tamaño: ${(response.ContentLength / 1024 / 1024).toFixed(2)} MB`);
+    console.log(`   Tipo: ${response.ContentType}`);
+
     // Configurar headers para la descarga
     res.setHeader('Content-Type', response.ContentType || 'application/octet-stream');
     res.setHeader('Content-Length', response.ContentLength);
     res.setHeader('Cache-Control', 'private, no-cache');
     res.setHeader('X-Content-Type-Options', 'nosniff');
     
-    // Headers CORS más permisivos para desarrollo
-    if (!IS_PRODUCTION || allowedOrigins.length === 0) {
-      res.setHeader('Access-Control-Allow-Origin', '*');
-    } else {
-      const origin = req.headers.origin;
-      if (allowedOrigins.includes(origin)) {
-        res.setHeader('Access-Control-Allow-Origin', origin);
-      }
-    }
-    res.setHeader('Access-Control-Allow-Methods', 'GET');
+    // Headers CORS permisivos para descargas
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
     res.setHeader('Access-Control-Allow-Headers', '*');
+    res.setHeader('Access-Control-Expose-Headers', 'Content-Length, Content-Type');
 
     // Stream el archivo al cliente
     response.Body.pipe(res);
 
-    console.log(`✅ Archivo descargado (${(response.ContentLength / 1024 / 1024).toFixed(2)} MB)`);
+    console.log(`✅ Streaming iniciado`);
 
   } catch (error) {
-    console.error('❌ Error descargando:', error);
+    console.error('❌ Error descargando de B2:', error);
+    console.error('   Código:', error.code || error.name);
+    console.error('   Mensaje:', error.message);
     
     let statusCode = 500;
     let errorMessage = 'Error descargando archivo';
     
     if (error.name === 'NoSuchKey' || error.code === 'NoSuchKey') {
       statusCode = 404;
-      errorMessage = 'Archivo no encontrado';
+      errorMessage = 'Archivo no encontrado en B2';
+      console.error(`   El archivo ${req.params.key} no existe en el bucket`);
     } else if (error.name === 'AccessDenied' || error.code === 'AccessDenied') {
       statusCode = 403;
       errorMessage = 'Acceso denegado al archivo';
+      console.error(`   Verifica las credenciales B2 y permisos del bucket`);
+    } else if (error.code === 'CredentialsError') {
+      statusCode = 500;
+      errorMessage = 'Error de credenciales B2';
+      console.error(`   Las credenciales B2 son inválidas o han expirado`);
     }
     
-    res.status(statusCode).json({
-      error: errorMessage,
-      details: IS_PRODUCTION ? undefined : error.message
-    });
+    // Si ya se enviaron headers, no podemos enviar JSON
+    if (res.headersSent) {
+      console.error('   Headers ya enviados, cerrando conexión');
+      res.end();
+    } else {
+      res.status(statusCode).json({
+        error: errorMessage,
+        key: req.params.key,
+        details: IS_PRODUCTION ? undefined : error.message
+      });
+    }
   }
 });
 

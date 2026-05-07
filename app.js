@@ -711,7 +711,10 @@ function showToast(msg, type = "info", duration = 3000) {
 function showToastProgress(pct, loaded, total) {
   toastProgress.classList.remove("hidden");
   if (total > 0) {
-    toastProgressBar.style.width = Math.min(100, Math.max(0, pct)) + "%";
+    const newWidth = Math.min(100, Math.max(0, pct));
+    // Forzar reflow para que la transición CSS funcione correctamente
+    toastProgressBar.offsetWidth;
+    toastProgressBar.style.width = newWidth + "%";
     toastText.textContent = `Descargando: ${formatBytes(loaded)} / ${formatBytes(total)}`;
   } else {
     toastText.textContent = `Descargando: ${formatBytes(loaded)}…`;

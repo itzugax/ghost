@@ -223,8 +223,6 @@ export async function downloadFromB2(key, onProgress = null) {
       const speed = loaded / elapsed;
       const percent = total ? Math.round((loaded / total) * 100) : 0;
       
-      console.log(`🔍 DEBUG: loaded=${loaded}, total=${total}, percent=${percent}, calc=${total ? (loaded/total)*100 : 'N/A'}`);
-      
       // Actualizar progreso cada 250ms para mejor responsividad
       if (now - lastProgressTime > 250) {
         lastProgressTime = now;

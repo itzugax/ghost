@@ -89,11 +89,25 @@ function formatCountdown(s) {
 }
 
 function generateRoomCode() {
-  return String(Math.floor(100000 + Math.random() * 900000));
+  // Caracteres alfanuméricos sin confusión: sin O, 0, I, 1, V, B
+  const chars = "23456789ACDEFGHJKLMNPQRSTUWXYZ";
+  let code = "";
+  for (let i = 0; i < 5; i++) {
+    code += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+  return code;
 }
 
 function sanitizeCode(input) {
-  return String(input).trim().replace(/[^0-9]/g, "").slice(0, 6);
+  // Permitir solo caracteres alfanuméricos válidos (sin O, 0, I, 1, V, B)
+  const validChars = "23456789ACDEFGHJKLMNPQRSTUWXYZ";
+  return String(input)
+    .trim()
+    .toUpperCase()
+    .split("")
+    .filter(c => validChars.includes(c))
+    .slice(0, 5)
+    .join("");
 }
 
 function haptic(pattern = [10]) {
@@ -335,6 +349,7 @@ function makeRipple(selector) {
 function initDigitInput() {
   const boxes = Array.from(document.querySelectorAll(".digit-box"));
   const hiddenInput = document.getElementById("room-input");
+  const validChars = "23456789ACDEFGHJKLMNPQRSTUWXYZ";
 
   function syncHidden() {
     hiddenInput.value = boxes.map(b => b.value).join("");
@@ -356,7 +371,7 @@ function initDigitInput() {
         }
       } else if (e.key === "ArrowLeft" && i > 0) {
         boxes[i - 1].focus();
-      } else if (e.key === "ArrowRight" && i < 5) {
+      } else if (e.key === "ArrowRight" && i < 4) {
         boxes[i + 1].focus();
       } else if (e.key === "Enter") {
         joinBtn.click();
@@ -364,8 +379,8 @@ function initDigitInput() {
     });
 
     box.addEventListener("input", (e) => {
-      // Filtrar solo dígitos
-      const val = e.target.value.replace(/[^0-9]/g, "").slice(-1);
+      // Filtrar solo caracteres alfanuméricos válidos
+      const val = e.target.value.toUpperCase().split("").filter(c => validChars.includes(c)).slice(-1).join("");
       box.value = val;
       if (val) {
         box.classList.add("digit-filled");
@@ -374,7 +389,7 @@ function initDigitInput() {
         void box.offsetWidth;
         box.classList.add("digit-pop");
         // Avanzar al siguiente
-        if (i < 5) boxes[i + 1].focus();
+        if (i < 4) boxes[i + 1].focus();
       } else {
         box.classList.remove("digit-filled");
       }
@@ -384,8 +399,8 @@ function initDigitInput() {
     // Pegar código completo
     box.addEventListener("paste", (e) => {
       e.preventDefault();
-      const pasted = (e.clipboardData.getData("text") || "").replace(/[^0-9]/g, "").slice(0, 6);
-      pasted.split("").forEach((ch, idx) => {
+      const pasted = (e.clipboardData.getData("text") || "").toUpperCase().split("").filter(c => validChars.includes(c)).slice(0, 5);
+      pasted.forEach((ch, idx) => {
         if (boxes[idx]) {
           boxes[idx].value = ch;
           boxes[idx].classList.add("digit-filled");
@@ -393,7 +408,7 @@ function initDigitInput() {
       });
       syncHidden();
       const nextEmpty = boxes.find(b => !b.value);
-      (nextEmpty || boxes[5]).focus();
+      (nextEmpty || boxes[4]).focus();
     });
 
     // Seleccionar todo al hacer focus
@@ -407,7 +422,8 @@ function runSlotMachine(callback) {
   const btn = document.getElementById("new-room-btn");
   const boxes = Array.from(document.querySelectorAll(".digit-box"));
   const finalCode = generateRoomCode();
-  const digits = finalCode.split("").map(Number);
+  const chars = finalCode.split("");
+  const validChars = "23456789ACDEFGHJKLMNPQRSTUWXYZ";
 
   btn.disabled = true;
 
@@ -416,15 +432,15 @@ function runSlotMachine(callback) {
   const FPS            = 60;
   const FRAME_MS       = 1000 / FPS;
 
-  // Para cada dígito: animar el valor que se muestra girando
-  digits.forEach((finalDigit, col) => {
+  // Para cada carácter: animar el valor que se muestra girando
+  chars.forEach((finalChar, col) => {
     const box = boxes[col];
     if (!box) return;
 
-    // Tiempo en que este dígito se detiene
-    const stopAt = TOTAL_DURATION - (digits.length - 1 - col) * STAGGER;
+    // Tiempo en que este carácter se detiene
+    const stopAt = TOTAL_DURATION - (chars.length - 1 - col) * STAGGER;
 
-    let current = Math.floor(Math.random() * 10); // valor inicial aleatorio
+    let currentIdx = Math.floor(Math.random() * validChars.length); // índice inicial aleatorio
     let startTime = null;
     let stopped = false;
 
@@ -435,9 +451,9 @@ function runSlotMachine(callback) {
       const elapsed = ts - startTime;
 
       if (elapsed >= stopAt && !stopped) {
-        // Parar en el dígito correcto
+        // Parar en el carácter correcto
         stopped = true;
-        box.value = String(finalDigit);
+        box.value = finalChar;
         box.classList.remove("digit-spinning");
         // Pop de aterrizaje
         box.classList.remove("digit-pop");
@@ -454,8 +470,8 @@ function runSlotMachine(callback) {
         const interval = FRAME_MS + progress * progress * 180;
 
         if (!box._lastChange || ts - box._lastChange >= interval) {
-          current = (current + 1) % 10;
-          box.value = String(current);
+          currentIdx = (currentIdx + 1) % validChars.length;
+          box.value = validChars[currentIdx];
           box._lastChange = ts;
         }
 
@@ -712,24 +728,10 @@ function showToastProgress(pct, loaded, total) {
   toastProgress.classList.remove("hidden");
   if (total > 0) {
     const newWidth = Math.min(100, Math.max(0, pct));
-    console.log(`📊 Progress bar update: ${newWidth}% (${formatBytes(loaded)}/${formatBytes(total)})`);
-    
-    // Remover transición temporalmente para el primer frame
-    const isFirstUpdate = toastProgressBar.style.width === "0%" || toastProgressBar.style.width === "";
-    if (isFirstUpdate) {
-      toastProgressBar.style.transition = "none";
-    }
-    
-    // Forzar reflow para que la transición CSS funcione correctamente
-    toastProgressBar.offsetWidth;
-    
-    // Restaurar transición y actualizar ancho
-    if (isFirstUpdate) {
-      toastProgressBar.style.transition = "width 0.3s linear";
-    }
-    
-    toastProgressBar.style.width = newWidth + "%";
-    console.log(`📊 Bar width set to: ${toastProgressBar.style.width}`);
+    // Solución simple: actualizar directamente sin transiciones complejas
+    requestAnimationFrame(() => {
+      toastProgressBar.style.width = newWidth + "%";
+    });
     toastText.textContent = `Descargando: ${formatBytes(loaded)} / ${formatBytes(total)}`;
   } else {
     toastText.textContent = `Descargando: ${formatBytes(loaded)}…`;
@@ -738,13 +740,7 @@ function showToastProgress(pct, loaded, total) {
 
 function hideToastProgress() {
   toastProgress.classList.add("hidden");
-  // Resetear sin transición para evitar animación al ocultar
-  toastProgressBar.style.transition = "none";
   toastProgressBar.style.width = "0%";
-  // Forzar reflow
-  toastProgressBar.offsetWidth;
-  // Restaurar transición para próxima vez
-  toastProgressBar.style.transition = "width 0.3s linear";
 }
 
 // Helper para mensajes traducidos
@@ -871,7 +867,7 @@ async function calibrateServerTime() {
 
 async function joinRoom(code) {
   const clean = sanitizeCode(code);
-  if (clean.length < 6) { setStatus("Código de 6 dígitos", "error"); return; }
+  if (clean.length < 5) { setStatus("Código de 5 caracteres", "error"); return; }
 
   // Cerrar onboarding si está visible
   closeOnboarding();

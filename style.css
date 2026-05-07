@@ -1079,7 +1079,7 @@ footer {
   background: #fff;
   border-radius: 100px;
   width: 0%;
-  transition: width 0.3s linear;
+  /* Sin transición CSS - controlado por JS */
 }
 
 /* ─── Timer blink últimos 10s ────────────────────────────── */

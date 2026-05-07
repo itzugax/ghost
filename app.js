@@ -712,9 +712,24 @@ function showToastProgress(pct, loaded, total) {
   toastProgress.classList.remove("hidden");
   if (total > 0) {
     const newWidth = Math.min(100, Math.max(0, pct));
+    console.log(`📊 Progress bar update: ${newWidth}% (${formatBytes(loaded)}/${formatBytes(total)})`);
+    
+    // Remover transición temporalmente para el primer frame
+    const isFirstUpdate = toastProgressBar.style.width === "0%" || toastProgressBar.style.width === "";
+    if (isFirstUpdate) {
+      toastProgressBar.style.transition = "none";
+    }
+    
     // Forzar reflow para que la transición CSS funcione correctamente
     toastProgressBar.offsetWidth;
+    
+    // Restaurar transición y actualizar ancho
+    if (isFirstUpdate) {
+      toastProgressBar.style.transition = "width 0.3s linear";
+    }
+    
     toastProgressBar.style.width = newWidth + "%";
+    console.log(`📊 Bar width set to: ${toastProgressBar.style.width}`);
     toastText.textContent = `Descargando: ${formatBytes(loaded)} / ${formatBytes(total)}`;
   } else {
     toastText.textContent = `Descargando: ${formatBytes(loaded)}…`;
@@ -723,7 +738,13 @@ function showToastProgress(pct, loaded, total) {
 
 function hideToastProgress() {
   toastProgress.classList.add("hidden");
+  // Resetear sin transición para evitar animación al ocultar
+  toastProgressBar.style.transition = "none";
   toastProgressBar.style.width = "0%";
+  // Forzar reflow
+  toastProgressBar.offsetWidth;
+  // Restaurar transición para próxima vez
+  toastProgressBar.style.transition = "width 0.3s linear";
 }
 
 // Helper para mensajes traducidos

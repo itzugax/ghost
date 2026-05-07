@@ -1639,7 +1639,9 @@ async function downloadAndDestroy(storagePath, dropId, fileName, contentType = "
       showToast("Descargando…", "info", 86400000);
       
       data = await downloadFromB2(b2Key || storagePath, (loaded, total, percent, speed) => {
-        showToastProgress(percent, loaded, total || fileSize);
+        const actualTotal = total || fileSize;
+        const actualPercent = actualTotal > 0 ? Math.round((loaded / actualTotal) * 100) : 0;
+        showToastProgress(actualPercent, loaded, actualTotal);
       });
       
       hideToastProgress();

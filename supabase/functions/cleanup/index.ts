@@ -27,7 +27,7 @@ Deno.serve(async (req) => {
     // 1. Buscar drops expirados
     const { data: expired, error } = await supabase
       .from("drops")
-      .select("id, storage_path, content_type")
+      .select("id, storage_path, content_type, storage, b2_key")
       .lt("expires_at", new Date().toISOString());
 
     if (error) {
@@ -51,19 +51,42 @@ Deno.serve(async (req) => {
       });
     }
 
-    // 2. Borrar archivos físicos del Storage
-    const paths = expired
-      .filter(d => d.content_type !== "text" && d.storage_path)
+    // 2. Borrar archivos físicos del Storage (Supabase)
+    const supabasePaths = expired
+      .filter(d => d.content_type !== "text" && d.storage_path && d.storage !== "b2")
       .map(d => d.storage_path);
 
-    if (paths.length) {
+    if (supabasePaths.length) {
       const { error: storageErr } = await supabase.storage
         .from("ghost-drop")
-        .remove(paths);
+        .remove(supabasePaths);
       if (storageErr) console.warn("Storage remove error:", storageErr.message);
     }
 
-    // 3. Borrar registros de la DB
+    // 3. Borrar archivos de R2 (via Worker)
+    const b2Keys = expired
+      .filter(d => d.storage === "b2" && d.b2_key)
+      .map(d => d.b2_key);
+
+    let b2Deleted = 0;
+    if (b2Keys.length) {
+      const workerUrl = Deno.env.get("R2_WORKER_URL") || "https://r2-ghost.jorgeugax.workers.dev";
+      for (const key of b2Keys) {
+        try {
+          const res = await fetch(`${workerUrl}/delete`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ key }),
+          });
+          if (res.ok) b2Deleted++;
+          else console.warn(`Failed to delete R2 key ${key}: ${res.status}`);
+        } catch (err) {
+          console.warn(`Error deleting R2 key ${key}:`, err.message);
+        }
+      }
+    }
+
+    // 4. Borrar registros de la DB
     const ids = expired.map(d => d.id);
     const { error: deleteErr } = await supabase
       .from("drops")
@@ -81,11 +104,12 @@ Deno.serve(async (req) => {
       });
     }
 
-    console.log(`Cleaned up ${ids.length} expired drops, ${paths.length} storage files`);
+    console.log(`Cleaned up ${ids.length} expired drops, ${supabasePaths.length} Supabase files, ${b2Deleted} R2 files`);
     return new Response(
       JSON.stringify({ 
         deleted: ids.length, 
-        storage_files: paths.length,
+        supabase_files: supabasePaths.length,
+        r2_files: b2Deleted,
         timestamp: new Date().toISOString()
       }),
       { 

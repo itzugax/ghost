@@ -1,0 +1,741 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Ghost Drop — Comparte archivos en 5 segundos</title>
+  <meta name="description" content="Comparte archivos cifrados sin registro ni apps. Solo entra con un código y arrastra. Auto-destrucción. Cero fricción." />
+  
+  <!-- SEO -->
+  <meta name="keywords" content="compartir archivos, file sharing, efímero, cifrado, sin registro, airdrop web, snapdrop alternativa" />
+  <meta name="author" content="Ugax" />
+  <link rel="canonical" href="https://gdrop.vercel.app" />
+  
+  <!-- Open Graph / Facebook -->
+  <meta property="og:type" content="website" />
+  <meta property="og:url" content="https://gdrop.vercel.app" />
+  <meta property="og:title" content="Ghost Drop — Comparte archivos en 5 segundos" />
+  <meta property="og:description" content="Sin registro. Sin apps. Cifrado E2E. La forma más rápida de compartir archivos." />
+  <meta property="og:image" content="https://gdrop.vercel.app/og-image.svg" />
+  
+  <!-- Twitter -->
+  <meta property="twitter:card" content="summary_large_image" />
+  <meta property="twitter:url" content="https://gdrop.vercel.app" />
+  <meta property="twitter:title" content="Ghost Drop — Share files in 5 seconds" />
+  <meta property="twitter:description" content="No signup. No apps. E2E encryption. The fastest way to share files." />
+  <meta property="twitter:image" content="https://gdrop.vercel.app/og-image.svg" />
+  
+  <!-- Theme -->
+  <meta name="theme-color" content="#000000" />
+  
+  <!-- PWA -->
+  <link rel="manifest" href="manifest.json" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+  <meta name="apple-mobile-web-app-title" content="GhostDrop" />
+  
+  <!-- Umami Analytics -->
+  <script defer src="https://cloud.umami.is/script.js" data-website-id="b303304f-494c-4689-be84-4ad643db31c6"></script>
+
+  <!-- QR Code library (local) -->
+  <script src="qrcode.min.js"></script>
+  <!-- JSZip for bulk download -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+  <!-- Supabase -->
+  <script src="supabase.min.js"></script>
+  <link rel="stylesheet" href="style.css" />
+  <link rel="icon" href="icon.png" type="image/png" />
+  <link rel="apple-touch-icon" href="icon.png" />
+  <link rel="manifest" href="manifest.json" />
+  <style>
+    .app-bg {
+      position: fixed;
+      inset: 0;
+      z-index: -1;
+      pointer-events: none;
+      overflow: hidden;
+    }
+    .app-bg::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background-image:
+        linear-gradient(rgba(59, 130, 246, 0.08) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(59, 130, 246, 0.08) 1px, transparent 1px);
+      background-size: 80px 80px;
+      mask-image: radial-gradient(ellipse 80% 70% at 50% 50%, black 20%, transparent 70%);
+      -webkit-mask-image: radial-gradient(ellipse 80% 70% at 50% 50%, black 20%, transparent 70%);
+    }
+    .app-bg::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: white;
+      mask-image: radial-gradient(ellipse 70% 60% at 50% 50%, black 10%, transparent 70%);
+      -webkit-mask-image: radial-gradient(ellipse 70% 60% at 50% 50%, black 10%, transparent 70%);
+      opacity: 0.03;
+      pointer-events: none;
+    }
+    .app-glow {
+      position: absolute;
+      width: 600px;
+      height: 600px;
+      background: radial-gradient(circle, rgba(37, 99, 235, 0.25), transparent 70%);
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -60%);
+      filter: blur(100px);
+      will-change: transform, opacity;
+      animation: glow-breathe 6s ease-in-out infinite alternate;
+    }
+    @keyframes glow-breathe {
+      from { transform: translate(-50%, -60%) scale(0.9); opacity: 0.5; }
+      to   { transform: translate(-50%, -60%) scale(1.15); opacity: 1; }
+    }
+    
+    .dust-particle {
+      position: fixed;
+      border-radius: 50%;
+      background: rgba(59, 130, 246, 0.15);
+      pointer-events: none;
+      will-change: transform;
+    }
+    .dust-particle-1 {
+      width: 2px; height: 2px;
+      top: 30%; left: 20%;
+      animation: dust-drift-1 30s ease-in-out infinite;
+    }
+    .dust-particle-2 {
+      width: 3px; height: 3px;
+      top: 60%; left: 70%;
+      animation: dust-drift-2 40s ease-in-out infinite;
+    }
+    .dust-particle-3 {
+      width: 1.5px; height: 1.5px;
+      top: 80%; left: 50%;
+      animation: dust-drift-3 35s ease-in-out infinite;
+    }
+    @keyframes dust-drift-1 {
+      0%, 100% { transform: translate(0, 0); opacity: 0.15; }
+      50% { transform: translate(30px, -40px); opacity: 0.08; }
+    }
+    @keyframes dust-drift-2 {
+      0%, 100% { transform: translate(0, 0); opacity: 0.15; }
+      50% { transform: translate(-50px, 20px); opacity: 0.08; }
+    }
+    @keyframes dust-drift-3 {
+      0%, 100% { transform: translate(0, 0); opacity: 0.15; }
+      50% { transform: translate(20px, 30px); opacity: 0.1; }
+    }
+
+    .card, .badge-btn {
+      will-change: filter, transform;
+      backface-visibility: hidden;
+      -webkit-backface-visibility: hidden;
+    }
+    
+    .card {
+      position: relative;
+      background: rgba(255,255,255,0.03) !important;
+      -webkit-backdrop-filter: blur(24px) !important;
+      backdrop-filter: blur(24px) !important;
+      border: none !important;
+      transition: all 0.3s ease-in-out !important;
+    }
+    .card::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      border-radius: inherit;
+      padding: 1px;
+      background: linear-gradient(180deg, rgba(255,255,255,0.12) 0%, transparent 100%);
+      mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+      -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+      mask-composite: exclude;
+      -webkit-mask-composite: xor;
+      pointer-events: none;
+    }
+    .card::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      border-radius: inherit;
+      background: linear-gradient(135deg, rgba(59,130,246,0.04), transparent);
+      background-size: 200% 200%;
+      pointer-events: none;
+      animation: ecto-drift 14s ease-in-out infinite;
+    }
+    @keyframes ecto-drift {
+      0%, 100% { background-position: 0% 0%; }
+      50% { background-position: 100% 100%; }
+    }
+    
+    .digit-box {
+      background: rgba(255,255,255,0.05) !important;
+      border: 1px solid rgba(255,255,255,0.2) !important;
+    }
+    .digit-box:focus {
+      border-color: #3b82f6 !important;
+      box-shadow: 0 0 15px rgba(59,130,246,0.3) !important;
+      background: rgba(59,130,246,0.04) !important;
+    }
+    
+    #join-btn {
+      background: linear-gradient(180deg, #3b82f6 0%, #2563eb 100%) !important;
+      box-shadow: 0 4px 16px rgba(59, 130, 246, 0.25) !important;
+      border: none !important;
+      transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1) !important;
+    }
+    #join-btn:hover {
+      background: linear-gradient(180deg, #60a5fa 0%, #3b82f6 100%) !important;
+      box-shadow: 0 8px 28px rgba(59, 130, 246, 0.4), 0 0 40px rgba(59, 130, 246, 0.15) !important;
+      transform: translateY(-2px) scale(1.02) !important;
+    }
+    
+    #drop-section, #text-section {
+      box-shadow: 0 0 40px rgba(59,130,246,0.06), 0 0 80px rgba(59,130,246,0.03) !important;
+    }
+    
+    #dropzone {
+      position: relative;
+      overflow: hidden;
+      box-shadow: inset 0 0 20px rgba(59, 130, 246, 0.1);
+      transition: all 0.3s ease-in-out !important;
+    }
+    #dropzone::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      border-radius: inherit;
+      background: radial-gradient(circle at 50% 50%, rgba(59,130,246,0.08) 0%, transparent 65%);
+      pointer-events: none;
+      opacity: 0;
+      animation: radar-pulse 4s ease-in-out infinite;
+    }
+    @keyframes radar-pulse {
+      0%, 100% { opacity: 0.3; transform: scale(0.95); }
+      50% { opacity: 1; transform: scale(1.08); }
+    }
+    #dropzone:hover {
+      background: rgba(255,255,255,0.05) !important;
+    }
+    #dropzone:hover .drop-icon {
+      transform: translateY(-2px);
+    }
+    
+    .drop-ghost {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      font-size: 3.5rem;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.3s ease, transform 0.3s ease;
+      filter: drop-shadow(0 0 20px rgba(59,130,246,0));
+      z-index: 1;
+    }
+    #dropzone.drag-over .drop-ghost {
+      opacity: 0.5;
+      animation: ghost-possess 0.8s ease-in-out infinite alternate;
+    }
+    #dropzone.drag-over .drop-icon {
+      opacity: 0;
+      transform: scale(0.8);
+    }
+    #dropzone.drag-over .drop-label,
+    #dropzone.drag-over .drop-sub {
+      opacity: 0.2;
+    }
+    @keyframes ghost-possess {
+      from { transform: translate(-50%, -50%) scale(0.95); filter: drop-shadow(0 0 15px rgba(59,130,246,0.1)); }
+      to { transform: translate(-50%, -50%) scale(1.05); filter: drop-shadow(0 0 35px rgba(59,130,246,0.3)); }
+    }
+    #dropzone.drag-over {
+      border-style: solid !important;
+      animation: dropzone-pulse 1.5s ease-in-out infinite !important;
+    }
+    @keyframes dropzone-pulse {
+      0%, 100% { border-color: rgba(59,130,246,0.5); box-shadow: inset 0 0 20px rgba(59,130,246,0.1); }
+      50% { border-color: rgba(59,130,246,0.95); box-shadow: inset 0 0 20px rgba(59,130,246,0.15), 0 0 24px 4px rgba(59,130,246,0.2); }
+    }
+    
+    #files-list li {
+      position: relative;
+      box-shadow: inset 0 0 20px rgba(59, 130, 246, 0.08);
+      transition: all 0.3s ease-in-out !important;
+    }
+    .drop-new::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      border-radius: inherit;
+      background: radial-gradient(circle at 50% 50%, rgba(255,255,255,0.12), transparent 70%);
+      pointer-events: none;
+      animation: smoke-puff 0.8s ease-out forwards;
+    }
+    @keyframes smoke-puff {
+      0% { opacity: 0.8; transform: scale(0.8); filter: blur(0); }
+      100% { opacity: 0; transform: scale(1.8); filter: blur(10px); }
+    }
+    
+    .empty-ghost {
+      display: inline-block;
+      position: relative;
+      animation: ghost-float-slow 6s ease-in-out infinite !important;
+    }
+    .empty-ghost::after {
+      content: '';
+      position: absolute;
+      bottom: -4px;
+      left: 50%;
+      width: 130%;
+      height: 8px;
+      background: radial-gradient(ellipse, rgba(0,0,0,0.2), transparent 70%);
+      transform: translateX(-50%);
+      border-radius: 50%;
+      filter: blur(3px);
+      opacity: 0.8;
+      pointer-events: none;
+      animation: ghost-shadow 6s ease-in-out infinite;
+      z-index: -1;
+    }
+    @keyframes ghost-shadow {
+      0%, 100% { transform: translateX(-50%) scale(1); opacity: 0.8; }
+      50% { transform: translateX(-50%) scale(0.85); opacity: 0.4; }
+    }
+    @keyframes ghost-float-slow {
+      0%, 100% { transform: translateY(0) rotate(-2deg); }
+      50% { transform: translateY(-5px) rotate(2deg); }
+    }
+    
+    .card-title {
+      font-weight: 500 !important;
+      font-size: 0.625rem !important;
+      letter-spacing: 0.1em !important;
+      opacity: 0.4 !important;
+    }
+    
+    .badge-btn {
+      background: rgba(255,255,255,0.04) !important;
+      -webkit-backdrop-filter: blur(12px) !important;
+      backdrop-filter: blur(12px) !important;
+      border: 1px solid rgba(255,255,255,0.08) !important;
+      transition: all 0.3s ease-in-out !important;
+    }
+    .badge-btn:hover {
+      background: rgba(255,255,255,0.09) !important;
+      -webkit-backdrop-filter: blur(20px) !important;
+      backdrop-filter: blur(20px) !important;
+      border-color: rgba(255,255,255,0.18) !important;
+    }
+    
+    #progress-bar {
+      background: linear-gradient(90deg, rgba(59,130,246,0.3), rgba(59,130,246,0.8), rgba(59,130,246,0.3)) !important;
+      background-size: 200% 100% !important;
+      animation: spark-flow 1s linear infinite !important;
+    }
+    #progress-bar.progress-indeterminate {
+      animation: spark-flow 0.6s linear infinite !important;
+    }
+    @keyframes spark-flow {
+      from { background-position: 200% 0; }
+      to { background-position: -200% 0; }
+    }
+    
+    @media (prefers-reduced-motion: reduce) {
+      .app-bg, .app-glow, .empty-ghost, #dropzone::after, #dropzone.drag-over, .card::after, #progress-bar, .dust-particle, .empty-ghost::after { animation: none !important; }
+      .dust-particle { opacity: 0.1 !important; }
+      .empty-ghost::after { opacity: 0.6 !important; filter: blur(3px) !important; }
+      #dropzone:hover .drop-icon, .drop-ghost { transform: none !important; opacity: 0 !important; }
+      .lang-dropdown { transition: none !important; }
+    }
+
+    .lang-switcher {
+      position: fixed;
+      top: 1.25rem;
+      right: 1.25rem;
+      z-index: 100;
+    }
+    .lang-trigger {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 0.5rem 0.875rem;
+      background: rgba(255,255,255,0.06);
+      -webkit-backdrop-filter: blur(16px);
+      backdrop-filter: blur(16px);
+      border: 2px solid rgba(59,130,246,0.25);
+      border-radius: 9999px;
+      color: var(--text);
+      font-size: 0.8125rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.25s ease;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.12), 0 0 14px rgba(59,130,246,0.15);
+      line-height: 1;
+    }
+    .lang-trigger:hover {
+      background: rgba(255,255,255,0.12);
+      border-color: rgba(59,130,246,0.5);
+      box-shadow: 0 4px 20px rgba(59,130,246,0.35), 0 0 28px rgba(59,130,246,0.2);
+    }
+    .lang-flags {
+      display: inline-flex;
+      align-items: center;
+      gap: 2px;
+      flex-shrink: 0;
+      line-height: 1;
+    }
+    .lang-chevron {
+      width: 10px;
+      height: 10px;
+      opacity: 0.5;
+      flex-shrink: 0;
+      transition: transform 0.2s ease;
+    }
+    .lang-switcher.open .lang-chevron {
+      transform: rotate(180deg);
+    }
+    .lang-dropdown {
+      position: absolute;
+      top: calc(100% + 6px);
+      right: 0;
+      min-width: 150px;
+      background: rgba(18, 22, 36, 0.92);
+      -webkit-backdrop-filter: blur(24px);
+      backdrop-filter: blur(24px);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 14px;
+      padding: 4px;
+      opacity: 0;
+      transform: translateY(-6px) scale(0.96);
+      pointer-events: none;
+      transition: all 0.2s ease;
+      box-shadow: 0 12px 40px rgba(0,0,0,0.4), 0 0 0 1px rgba(255,255,255,0.03);
+    }
+    .lang-dropdown::before {
+      content: '';
+      position: absolute;
+      top: -6px;
+      left: 0;
+      right: 0;
+      height: 6px;
+      background: transparent;
+    }
+    .lang-switcher:hover .lang-dropdown,
+    .lang-switcher.open .lang-dropdown {
+      opacity: 1;
+      transform: translateY(0) scale(1);
+      pointer-events: auto;
+    }
+    .lang-option {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      width: 100%;
+      padding: 0.5rem 0.75rem;
+      background: none;
+      border: none;
+      border-radius: 10px;
+      color: rgba(255,255,255,0.6);
+      font-size: 0.8125rem;
+      cursor: pointer;
+      transition: all 0.15s ease;
+      text-align: left;
+    }
+    .lang-option:hover {
+      background: rgba(59,130,246,0.15);
+      color: #fff;
+    }
+    .lang-option.active {
+      color: #60a5fa;
+      font-weight: 600;
+    }
+    .lang-option svg {
+      flex-shrink: 0;
+      border-radius: 2px;
+    }
+  </style>
+</head>
+<body>
+
+    <div class="app-bg" aria-hidden="true">
+      <div class="app-glow"></div>
+      <div class="dust-particle dust-particle-1" aria-hidden="true"></div>
+      <div class="dust-particle dust-particle-2" aria-hidden="true"></div>
+      <div class="dust-particle dust-particle-3" aria-hidden="true"></div>
+    </div>
+
+  <header>
+    <a href="./index.html" style="text-decoration:none;color:inherit;cursor:pointer"><div class="logo">👻 Ghost<span style="color: #3b82f6;">Drop</span></div></a>
+    <div class="tagline" data-i18n="tagline">Comparte archivos en 5 segundos. Sin registro. Sin apps. Cifrado E2E.</div>
+    <div class="lang-switcher" id="lang-btn">
+      <button class="lang-trigger" title="Change language">
+        <span class="lang-flags"></span>
+        <span class="lang-code">EN</span>
+        <svg class="lang-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="6 9 12 15 18 9"/>
+        </svg>
+      </button>
+      <div class="lang-dropdown">
+        <button class="lang-option" data-lang="es" type="button">
+          <svg viewBox="0 0 24 16" width="16" height="11"><rect width="24" height="16" fill="#c60b1e"/><rect y="4" width="24" height="8" fill="#ffc400"/></svg>
+          <span style="opacity:0.3;font-size:0.6rem;line-height:1">/</span>
+          <svg viewBox="0 0 24 16" width="16" height="11"><rect width="8" height="16" fill="#006847"/><rect x="8" width="8" height="16" fill="#fff"/><rect x="16" width="8" height="16" fill="#ce1126"/></svg>
+          Español
+        </button>
+        <button class="lang-option active" data-lang="en" type="button">
+          <svg viewBox="0 0 24 16" width="16" height="11"><rect width="24" height="16" fill="#b22234"/><rect y="2" width="24" height="2" fill="#fff"/><rect y="6" width="24" height="2" fill="#fff"/><rect y="10" width="24" height="2" fill="#fff"/><rect y="14" width="24" height="2" fill="#fff"/><rect width="9.5" height="8" fill="#3c3b6e"/></svg>
+          <span style="opacity:0.3;font-size:0.6rem;line-height:1">/</span>
+          <svg viewBox="0 0 24 16" width="16" height="11"><rect width="24" height="16" fill="#fff"/><rect x="10.5" width="3" height="16" fill="#ce1124"/><rect y="6.5" width="24" height="3" fill="#ce1124"/></svg>
+          English
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Estado -->
+  <div class="card" id="status-card">
+    <div id="status" class="status info" data-i18n="statusNoRoom">Sin sala activa</div>
+    <div id="room-badge" class="room-badge hidden">
+      <span id="room-code-display"></span>
+      <span id="members-count" class="members-count"></span>
+      <div class="badge-actions">
+        <button id="copy-room-btn" class="badge-btn" title="Copiar código">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+          <span data-i18n="copyBtn">Copiar</span>
+        </button>
+        <button id="invite-btn" class="badge-btn" title="Invitar">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg>
+          <span data-i18n="inviteBtn">Invitar</span>
+        </button>
+        <button id="qr-btn" class="badge-btn" title="Ver QR">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="3" height="3"/></svg>
+          <span data-i18n="qrBtn">QR</span>
+        </button>
+        <button id="leave-btn" class="badge-btn danger" title="Salir">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+          <span data-i18n="leaveBtn">Salir</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Unirse / crear sala -->
+  <div class="card" id="room-section">
+    <div class="card-title" data-i18n="roomTitle">Entrar a una sala</div>
+    <p class="room-desc" data-i18n="roomDesc">Usa un código de 5 caracteres para compartir con quien quieras, desde cualquier red.</p>
+
+    <!-- Input de dígitos individuales -->
+    <div class="digit-input-row">
+      <div class="digit-boxes" id="digit-boxes">
+        <input class="digit-box" type="text" inputmode="text" maxlength="1" pattern="[A-Z0-9]" autocomplete="off" />
+        <input class="digit-box" type="text" inputmode="text" maxlength="1" pattern="[A-Z0-9]" autocomplete="off" />
+        <input class="digit-box" type="text" inputmode="text" maxlength="1" pattern="[A-Z0-9]" autocomplete="off" />
+        <input class="digit-box" type="text" inputmode="text" maxlength="1" pattern="[A-Z0-9]" autocomplete="off" />
+        <input class="digit-box" type="text" inputmode="text" maxlength="1" pattern="[A-Z0-9]" autocomplete="off" />
+      </div>
+      <button id="join-btn" class="btn-primary" data-i18n="joinBtn">Entrar</button>
+    </div>
+    <!-- Input oculto para compatibilidad con el resto del JS -->
+    <input id="room-input" type="hidden" />
+
+    <button id="new-room-btn" class="btn-secondary" data-i18n="newRoomBtn">🎲 Sala aleatoria</button>
+
+    <!-- Salas recientes -->
+    <div id="recent-rooms" style="display:none">
+      <div class="section-label" data-i18n="recentLabel">Recientes</div>
+      <div id="recent-list" class="recent-list"></div>
+    </div>
+  </div>
+
+  <!-- Subir archivo -->
+  <div class="card hidden" id="drop-section">
+    <div class="card-title" data-i18n="dropTitle">Compartir archivo</div>
+    <div id="dropzone">
+      <span class="drop-icon">📂</span>
+      <span class="drop-ghost" aria-hidden="true">👻</span>
+      <div class="drop-label" data-i18n="dropLabel">Arrastra archivos aquí</div>
+      <div class="drop-sub" data-i18n="dropSub" data-i18n-html="true">o toca para seleccionar · <strong>Máx: 250MB</strong></div>
+    </div>
+    <input type="file" id="file-input" multiple />
+    <div id="progress-wrap">
+      <div id="progress-bar"></div>
+    </div>
+    <div id="progress-label" class="progress-label"></div>
+  </div>
+
+  <!-- Enviar texto -->
+  <div class="card hidden" id="text-section">
+    <div class="card-title" data-i18n="textTitle">Compartir texto / enlace</div>
+    <textarea id="text-input" data-i18n="textPlaceholder" placeholder="Pega un texto, enlace o nota…" rows="3"></textarea>
+    <div id="typing-indicator" class="typing-indicator">
+      <div class="typing-dot"></div>
+      <div class="typing-dot"></div>
+      <div class="typing-dot"></div>
+      <span data-i18n="typingIndicator">alguien está escribiendo…</span>
+    </div>
+    <div class="text-actions">
+      <div class="ttl-options">
+        <button class="ttl-btn" data-secs="60" data-i18n="ttl1min">1 min</button>
+        <button class="ttl-btn active" data-secs="300" data-i18n="ttl5min">5 min</button>
+        <button class="ttl-btn" data-secs="900" data-i18n="ttl15min">15 min</button>
+      </div>
+      <button id="send-text-btn" class="btn-primary" data-i18n="sendBtn">Enviar</button>
+    </div>
+  </div>
+
+  <!-- Lista de drops -->
+  <div class="card hidden" id="list-section">
+    <div class="list-header">
+      <div class="card-title" style="margin:0"><span data-i18n="listTitle">En la sala</span> <span id="drop-count" class="drop-count"></span></div>
+      <button id="download-all-btn" class="badge-btn hidden" title="Descargar todo como ZIP">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+        <span data-i18n="downloadAllBtn">Descargar todo</span>
+      </button>
+      <button id="notify-btn" class="badge-btn" title="Activar notificaciones">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+        <span data-i18n="notifyBtn">Notificar</span>
+      </button>
+      <button id="compact-btn" class="badge-btn" title="Modo compacto">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
+      </button>
+    </div>
+    <ul id="files-list">
+      <li class="empty-state">
+        <span class="empty-ghost" data-i18n="emptyGhost">👻</span>
+        <span class="empty-title" data-i18n="emptyTitle">La sala está despejada.</span>
+        <span class="empty-sub" data-i18n="emptySub">El radar no detecta archivos.</span>
+      </li>
+    </ul>
+  </div>
+
+  <!-- Modal QR -->
+  <div id="qr-modal" class="modal-backdrop hidden">
+    <div class="modal">
+      <div class="modal-title" data-i18n="qrTitle">Escanea para unirte</div>
+      <div id="qr-canvas"></div>
+      <div class="modal-code" id="modal-code"></div>
+      <button id="qr-close" class="btn-primary" style="width:100%" data-i18n="qrClose">Cerrar</button>
+    </div>
+  </div>
+
+  <!-- Notificación toast -->
+  <div id="toast" class="toast hidden"></div>
+
+  <!-- Barra de progreso de descarga -->
+  <div id="dl-progress" class="dl-progress hidden">
+    <span id="dl-progress-text" class="dl-progress-text">Descargando…</span>
+    <div id="dl-progress-track" class="dl-progress-track">
+      <div id="dl-progress-bar" class="dl-progress-bar"></div>
+    </div>
+  </div>
+
+  <!-- Onboarding tooltip (primera visita) -->
+  <div id="onboarding-tooltip" class="onboarding-tooltip hidden">
+    <div class="onboarding-content">
+      <div class="onboarding-header">
+        <div class="onboarding-icon">👋</div>
+        <button id="onboarding-close" class="onboarding-close">✕</button>
+      </div>
+      <div class="onboarding-text">
+        <div class="onboarding-title" data-i18n="onboardingTitle">¡Bienvenido a Ghost Drop!</div>
+        <div class="onboarding-desc" data-i18n="onboardingDesc">Compartir archivos nunca fue tan fácil:</div>
+        <div class="onboarding-steps">
+          <div class="onboarding-step">
+            <span class="step-number">1</span>
+            <span class="step-text" data-i18n="onboardingStep1">Crea una sala con 5 caracteres</span>
+          </div>
+          <div class="onboarding-step">
+            <span class="step-number">2</span>
+            <span class="step-text" data-i18n="onboardingStep2">Arrastra tus archivos</span>
+          </div>
+          <div class="onboarding-step">
+            <span class="step-number">3</span>
+            <span class="step-text" data-i18n="onboardingStep3">Comparte el código</span>
+          </div>
+        </div>
+        <button id="onboarding-cta" class="onboarding-cta" data-i18n="onboardingCta">Entendido, empecemos 🚀</button>
+      </div>
+    </div>
+    <div class="onboarding-backdrop"></div>
+  </div>
+
+  <!-- TTL Picker flotante (aparece al soltar archivo) -->
+  <div id="ttl-picker" class="ttl-picker hidden" role="dialog" aria-modal="true" aria-label="Seleccionar tiempo">
+    <div class="ttl-picker-backdrop"></div>
+    <div class="ttl-picker-sheet">
+      <div class="ttl-picker-title" data-i18n="ttlPickerTitle">¿Cuánto tiempo le damos?</div>
+      <div class="ttl-picker-sub" data-i18n="ttlPickerSub">El archivo desaparecerá para todos al expirar</div>
+      <div class="ttl-picker-options">
+        <button class="ttl-picker-btn" data-secs="60">
+          <span class="ttl-picker-time">1</span>
+          <span class="ttl-picker-unit">min</span>
+        </button>
+        <button class="ttl-picker-btn" data-secs="300">
+          <span class="ttl-picker-time">5</span>
+          <span class="ttl-picker-unit">min</span>
+        </button>
+        <button class="ttl-picker-btn" data-secs="900">
+          <span class="ttl-picker-time">15</span>
+          <span class="ttl-picker-unit">min</span>
+        </button>
+      </div>
+      <label class="ttl-picker-burn">
+        <input type="checkbox" id="burn-after-reading" />
+        <span data-i18n="ttlPickerBurn">🔥 Borrar después de 1 descarga</span>
+      </label>
+      <button class="ttl-picker-cancel" data-i18n="ttlPickerCancel">Cancelar</button>
+    </div>
+  </div>
+
+  <!-- Modal imagen -->
+  <div id="img-modal" class="modal-backdrop hidden" onclick="if(event.target===this)this.classList.add('hidden')">
+    <div class="img-modal-inner">
+      <div class="img-modal-header">
+        <span id="img-modal-title" class="img-modal-title"></span>
+        <button class="badge-btn" onclick="document.getElementById('img-modal').classList.add('hidden')">✕ Cerrar</button>
+      </div>
+      <img id="img-modal-img" class="img-modal-img" alt="" />
+    </div>
+  </div>
+
+  <footer>
+    <span>Ghost Drop · <span data-i18n="tagline">Cifrado E2E · Cero fricción</span></span>
+    <span id="total-uploads" class="footer-stat"></span>
+    <div class="footer-links">
+      <a href="/privacy.html" data-i18n="footerPrivacy">Privacidad</a>
+      <span>·</span>
+      <a href="/terms.html" data-i18n="footerTerms">Términos</a>
+      <span>·</span>
+      <a href="https://github.com/itzugax/ghost" target="_blank" rel="noopener" class="github-link">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+          <path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/>
+        </svg>
+        <span data-i18n="footerOpenSource">Open Source</span>
+      </a>
+    </div>
+    <span class="footer-copy" data-i18n="footerCopyright">© 2026 Ugax. Todos los derechos reservados.</span>
+  </footer>
+
+  <!-- Badge de versión -->
+  <div class="version-badge" title="Versión de la app">v3.6.0</div>
+
+  <script src="supabase-config.js"></script>
+  <script src="crypto.js"></script>
+  <script src="i18n.js"></script>
+  <script type="module" src="app.js"></script>
+  
+  <!-- Service Worker para PWA -->
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('./sw.js')
+          .then(reg => console.log('✅ Service Worker registrado'))
+          .catch(err => console.warn('⚠️ Service Worker error:', err));
+      });
+    }
+  </script>
+</body>
+</html>

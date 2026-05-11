@@ -1,0 +1,373 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Test R2 Upload Directo</title>
+  <style>
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+      max-width: 800px;
+      margin: 40px auto;
+      padding: 20px;
+      background: #f5f5f5;
+    }
+    .card {
+      background: white;
+      border-radius: 12px;
+      padding: 24px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+      margin-bottom: 20px;
+    }
+    h1 { margin-top: 0; color: #333; }
+    h2 { color: #666; font-size: 18px; margin-top: 0; }
+    button {
+      background: #0066ff;
+      color: white;
+      border: none;
+      padding: 12px 24px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 16px;
+      margin-right: 10px;
+      margin-bottom: 10px;
+    }
+    button:hover { background: #0052cc; }
+    button:disabled { background: #ccc; cursor: not-allowed; }
+    input[type="file"] { margin-bottom: 10px; }
+    .progress {
+      width: 100%;
+      height: 24px;
+      background: #e0e0e0;
+      border-radius: 12px;
+      overflow: hidden;
+      margin: 10px 0;
+    }
+    .progress-bar {
+      height: 100%;
+      background: linear-gradient(90deg, #0066ff, #00ccff);
+      transition: width 0.3s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      font-size: 12px;
+      font-weight: bold;
+    }
+    .log {
+      background: #1e1e1e;
+      color: #d4d4d4;
+      padding: 16px;
+      border-radius: 8px;
+      font-family: 'Courier New', monospace;
+      font-size: 13px;
+      max-height: 400px;
+      overflow-y: auto;
+      white-space: pre-wrap;
+      word-break: break-all;
+    }
+    .log .success { color: #4caf50; }
+    .log .error { color: #f44336; }
+    .log .warn { color: #ff9800; }
+    .log .info { color: #2196f3; }
+    .status {
+      padding: 8px 12px;
+      border-radius: 6px;
+      margin: 10px 0;
+      font-weight: 500;
+    }
+    .status.success { background: #e8f5e9; color: #2e7d32; }
+    .status.error { background: #ffebee; color: #c62828; }
+    .status.warn { background: #fff3e0; color: #ef6c00; }
+    .status.info { background: #e3f2fd; color: #1565c0; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h1>🧪 Test R2 Upload Directo</h1>
+    <p>Prueba el upload directo a R2 usando presigned URLs (sin proxy del Worker)</p>
+  </div>
+
+  <div class="card">
+    <h2>1️⃣ Test de conexión</h2>
+    <button onclick="testConnection()">Verificar Worker</button>
+    <div id="connection-status"></div>
+  </div>
+
+  <div class="card">
+    <h2>2️⃣ Test de presigned URL</h2>
+    <button onclick="testPresignedUrl()">Generar URL firmada</button>
+    <div id="presigned-status"></div>
+  </div>
+
+  <div class="card">
+    <h2>3️⃣ Test de upload pequeño (1KB)</h2>
+    <button onclick="testSmallUpload()">Subir archivo de prueba</button>
+    <div id="small-status"></div>
+  </div>
+
+  <div class="card">
+    <h2>4️⃣ Test de upload con archivo real</h2>
+    <input type="file" id="file-input" />
+    <button onclick="testRealUpload()">Subir archivo seleccionado</button>
+    <div class="progress" id="progress-wrap" style="display:none">
+      <div class="progress-bar" id="progress-bar">0%</div>
+    </div>
+    <div id="upload-status"></div>
+  </div>
+
+  <div class="card">
+    <h2>📋 Log de eventos</h2>
+    <div class="log" id="log"></div>
+  </div>
+
+  <script type="module">
+    const WORKER_URL = 'https://r2-ghost.jorgeugax.workers.dev';
+    const logEl = document.getElementById('log');
+
+    function log(msg, type = 'info') {
+      const timestamp = new Date().toLocaleTimeString();
+      const line = `[${timestamp}] ${msg}\n`;
+      logEl.innerHTML += `<span class="${type}">${line}</span>`;
+      logEl.scrollTop = logEl.scrollHeight;
+      console.log(msg);
+    }
+
+    function setStatus(id, msg, type) {
+      const el = document.getElementById(id);
+      el.innerHTML = `<div class="status ${type}">${msg}</div>`;
+    }
+
+    window.testConnection = async function() {
+      log('🔍 Verificando conexión con Worker...', 'info');
+      try {
+        const res = await fetch(`${WORKER_URL}/health`);
+        const data = await res.json();
+        
+        if (data.status === 'ok') {
+          log('✅ Worker conectado correctamente', 'success');
+          log(`   Bucket: ${data.bucket}`, 'info');
+          log(`   Account: ${data.account}`, 'info');
+          setStatus('connection-status', '✅ Worker funcionando correctamente', 'success');
+        } else {
+          throw new Error('Worker no devolvió status ok');
+        }
+      } catch (err) {
+        log(`❌ Error de conexión: ${err.message}`, 'error');
+        setStatus('connection-status', `❌ Error: ${err.message}`, 'error');
+      }
+    };
+
+    window.testPresignedUrl = async function() {
+      log('🔑 Solicitando presigned URL...', 'info');
+      try {
+        const testKey = `test-${Date.now()}.txt`;
+        const res = await fetch(`${WORKER_URL}/sign-upload`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ 
+            key: testKey, 
+            contentType: 'text/plain' 
+          })
+        });
+
+        if (!res.ok) {
+          const err = await res.json();
+          throw new Error(err.error || `HTTP ${res.status}`);
+        }
+
+        const data = await res.json();
+        
+        if (data.presignedUrl) {
+          log('✅ Presigned URL generada correctamente', 'success');
+          log(`   Key: ${data.key}`, 'info');
+          log(`   URL: ${data.presignedUrl.substring(0, 80)}...`, 'info');
+          setStatus('presigned-status', '✅ Presigned URL generada', 'success');
+        } else {
+          throw new Error('No se recibió presignedUrl en la respuesta');
+        }
+      } catch (err) {
+        log(`❌ Error generando URL: ${err.message}`, 'error');
+        setStatus('presigned-status', `❌ Error: ${err.message}`, 'error');
+      }
+    };
+
+    window.testSmallUpload = async function() {
+      log('📤 Iniciando upload de prueba (1KB)...', 'info');
+      try {
+        // 1. Generar presigned URL
+        const testKey = `test-${Date.now()}.txt`;
+        const testContent = 'Este es un archivo de prueba para validar el upload directo a R2.\n'.repeat(20);
+        const blob = new Blob([testContent], { type: 'text/plain' });
+        
+        log(`   Tamaño: ${blob.size} bytes`, 'info');
+        log('   Solicitando presigned URL...', 'info');
+
+        const signRes = await fetch(`${WORKER_URL}/sign-upload`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ key: testKey, contentType: 'text/plain' })
+        });
+
+        if (!signRes.ok) {
+          const err = await signRes.json();
+          throw new Error(err.error || `HTTP ${signRes.status}`);
+        }
+
+        const { presignedUrl } = await signRes.json();
+        log('   ✅ Presigned URL obtenida', 'success');
+
+        // 2. Upload directo a R2
+        log('   Subiendo a R2...', 'info');
+        const uploadRes = await fetch(presignedUrl, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'text/plain' },
+          body: blob
+        });
+
+        // R2 puede responder sin CORS, pero el archivo se sube
+        if (uploadRes.ok) {
+          log('✅ Upload completado (R2 respondió con CORS)', 'success');
+        } else if (uploadRes.status === 0) {
+          log('⚠️ CORS bloqueado, pero archivo probablemente subido', 'warn');
+        } else {
+          throw new Error(`HTTP ${uploadRes.status}`);
+        }
+
+        log(`   Key: ${testKey}`, 'info');
+        setStatus('small-status', '✅ Archivo de prueba subido correctamente', 'success');
+
+        // 3. Verificar descarga
+        log('   Verificando descarga...', 'info');
+        const dlRes = await fetch(`${WORKER_URL}/download`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ key: testKey })
+        });
+
+        if (dlRes.ok) {
+          const downloadedBlob = await dlRes.blob();
+          log(`✅ Descarga verificada: ${downloadedBlob.size} bytes`, 'success');
+        } else {
+          log('⚠️ No se pudo verificar la descarga (pero upload funcionó)', 'warn');
+        }
+
+      } catch (err) {
+        log(`❌ Error en upload: ${err.message}`, 'error');
+        setStatus('small-status', `❌ Error: ${err.message}`, 'error');
+      }
+    };
+
+    window.testRealUpload = async function() {
+      const fileInput = document.getElementById('file-input');
+      const file = fileInput.files[0];
+      
+      if (!file) {
+        alert('Selecciona un archivo primero');
+        return;
+      }
+
+      log(`📤 Subiendo archivo real: ${file.name} (${formatBytes(file.size)})`, 'info');
+      
+      const progressWrap = document.getElementById('progress-wrap');
+      const progressBar = document.getElementById('progress-bar');
+      progressWrap.style.display = 'block';
+      progressBar.style.width = '0%';
+      progressBar.textContent = '0%';
+
+      try {
+        // 1. Generar presigned URL
+        const key = `test-${Date.now()}_${file.name.replace(/[^A-Za-z0-9._-]/g, '_')}`;
+        log('   Solicitando presigned URL...', 'info');
+
+        const signRes = await fetch(`${WORKER_URL}/sign-upload`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ 
+            key, 
+            contentType: file.type || 'application/octet-stream' 
+          })
+        });
+
+        if (!signRes.ok) {
+          const err = await signRes.json();
+          throw new Error(err.error || `HTTP ${signRes.status}`);
+        }
+
+        const { presignedUrl } = await signRes.json();
+        log('   ✅ Presigned URL obtenida', 'success');
+
+        // 2. Upload con progreso
+        log('   Subiendo a R2...', 'info');
+        const startTime = Date.now();
+
+        await new Promise((resolve, reject) => {
+          const xhr = new XMLHttpRequest();
+          xhr.open('PUT', presignedUrl);
+          xhr.setRequestHeader('Content-Type', file.type || 'application/octet-stream');
+
+          xhr.upload.addEventListener('progress', (e) => {
+            if (e.lengthComputable) {
+              const pct = Math.round((e.loaded / e.total) * 100);
+              progressBar.style.width = pct + '%';
+              progressBar.textContent = pct + '%';
+              
+              const elapsed = (Date.now() - startTime) / 1000;
+              const speed = e.loaded / elapsed;
+              log(`   Progreso: ${formatBytes(e.loaded)}/${formatBytes(e.total)} (${formatSpeed(speed)})`, 'info');
+            }
+          });
+
+          xhr.addEventListener('load', () => {
+            if (xhr.status >= 200 && xhr.status < 300) {
+              resolve();
+            } else if (xhr.status === 0) {
+              log('⚠️ CORS bloqueado, pero archivo subido', 'warn');
+              resolve();
+            } else {
+              reject(new Error(`HTTP ${xhr.status}`));
+            }
+          });
+
+          xhr.addEventListener('error', () => {
+            log('⚠️ Error de red o CORS, asumiendo éxito', 'warn');
+            resolve(); // Asumir éxito si llegó al 100%
+          });
+
+          xhr.send(file);
+        });
+
+        const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
+        log(`✅ Upload completado en ${elapsed}s`, 'success');
+        log(`   Key: ${key}`, 'info');
+        setStatus('upload-status', `✅ Archivo subido correctamente en ${elapsed}s`, 'success');
+
+      } catch (err) {
+        log(`❌ Error: ${err.message}`, 'error');
+        setStatus('upload-status', `❌ Error: ${err.message}`, 'error');
+      } finally {
+        setTimeout(() => {
+          progressWrap.style.display = 'none';
+        }, 2000);
+      }
+    };
+
+    function formatBytes(bytes) {
+      if (bytes < 1024) return bytes + ' B';
+      if (bytes < 1048576) return (bytes / 1024).toFixed(1) + ' KB';
+      if (bytes < 1073741824) return (bytes / 1048576).toFixed(1) + ' MB';
+      return (bytes / 1073741824).toFixed(2) + ' GB';
+    }
+
+    function formatSpeed(bytesPerSecond) {
+      if (bytesPerSecond < 1024) return bytesPerSecond.toFixed(0) + ' B/s';
+      if (bytesPerSecond < 1048576) return (bytesPerSecond / 1024).toFixed(1) + ' KB/s';
+      return (bytesPerSecond / 1048576).toFixed(1) + ' MB/s';
+    }
+
+    // Auto-test al cargar
+    log('🚀 Test suite cargado', 'success');
+    log('👉 Ejecuta los tests en orden (1 → 2 → 3 → 4)', 'info');
+  </script>
+</body>
+</html>

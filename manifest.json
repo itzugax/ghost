@@ -1,0 +1,29 @@
+{
+  "name": "Ghost Drop — Comparte archivos en 5 segundos",
+  "short_name": "GhostDrop",
+  "version": "3.7.0",
+  "description": "Comparte archivos cifrados sin registro. Códigos alfanuméricos de 5 caracteres.",
+  "start_url": "./",
+  "display": "standalone",
+  "background_color": "#0a0e1a",
+  "theme_color": "#00d9ff",
+  "icons": [
+    {
+      "src": "icon.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "icon.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "icon.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    }
+  ]
+}

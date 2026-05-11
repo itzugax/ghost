@@ -7,17 +7,123 @@
   <link rel="stylesheet" href="style.css" />
   <style>
     .legal-header {
-      max-width: 680px;
+      max-width: 896px;
       margin: 0 auto;
-      padding: 1.5rem 1.5rem 0;
+      padding: 2.5rem 2rem 0;
       display: flex;
       justify-content: space-between;
       align-items: center;
     }
     .legal-page {
-      max-width: 680px;
+      max-width: 896px;
       margin: 0 auto;
-      padding: 1rem 1.5rem 2rem;
+      padding: 2rem 2rem 3rem;
+    }
+    .lang-switcher {
+      position: relative;
+      z-index: 100;
+    }
+    .lang-trigger {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 0.5rem 0.875rem;
+      background: rgba(255,255,255,0.06);
+      -webkit-backdrop-filter: blur(16px);
+      backdrop-filter: blur(16px);
+      border: 2px solid rgba(59,130,246,0.25);
+      border-radius: 9999px;
+      color: var(--text);
+      font-size: 0.8125rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.25s ease;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.12), 0 0 14px rgba(59,130,246,0.15);
+      line-height: 1;
+    }
+    .lang-trigger:hover {
+      background: rgba(255,255,255,0.12);
+      border-color: rgba(59,130,246,0.5);
+      box-shadow: 0 4px 20px rgba(59,130,246,0.35), 0 0 28px rgba(59,130,246,0.2);
+    }
+    .lang-flags {
+      display: inline-flex;
+      align-items: center;
+      gap: 2px;
+      flex-shrink: 0;
+      line-height: 1;
+    }
+    .lang-chevron {
+      width: 10px;
+      height: 10px;
+      opacity: 0.5;
+      flex-shrink: 0;
+      transition: transform 0.2s ease;
+    }
+    .lang-switcher.open .lang-chevron {
+      transform: rotate(180deg);
+    }
+    .lang-dropdown {
+      position: absolute;
+      top: calc(100% + 6px);
+      right: 0;
+      min-width: 150px;
+      background: rgba(18, 22, 36, 0.92);
+      -webkit-backdrop-filter: blur(24px);
+      backdrop-filter: blur(24px);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 14px;
+      padding: 4px;
+      opacity: 0;
+      transform: translateY(-6px) scale(0.96);
+      pointer-events: none;
+      transition: all 0.2s ease;
+      box-shadow: 0 12px 40px rgba(0,0,0,0.4), 0 0 0 1px rgba(255,255,255,0.03);
+    }
+    .lang-dropdown::before {
+      content: '';
+      position: absolute;
+      top: -6px;
+      left: 0;
+      right: 0;
+      height: 6px;
+      background: transparent;
+    }
+    .lang-switcher:hover .lang-dropdown,
+    .lang-switcher.open .lang-dropdown {
+      opacity: 1;
+      transform: translateY(0) scale(1);
+      pointer-events: auto;
+    }
+    .lang-option {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      width: 100%;
+      padding: 0.5rem 0.75rem;
+      background: none;
+      border: none;
+      border-radius: 10px;
+      color: rgba(255,255,255,0.6);
+      font-size: 0.8125rem;
+      cursor: pointer;
+      transition: all 0.15s ease;
+      text-align: left;
+    }
+    .lang-option:hover {
+      background: rgba(59,130,246,0.15);
+      color: #fff;
+    }
+    .lang-option.active {
+      color: #60a5fa;
+      font-weight: 600;
+    }
+    .lang-option svg {
+      flex-shrink: 0;
+      border-radius: 2px;
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .lang-dropdown { transition: none !important; }
     }
     .legal-page h1 {
       font-size: 2.5rem;
@@ -70,12 +176,34 @@
 <body>
   <div class="legal-header">
     <a href="./index.html" class="back-link" data-i18n-text="backLink">← Volver a Ghost Drop</a>
-    <button id="lang-btn" class="lang-btn" title="Change language">EN</button>
+    <div class="lang-switcher" id="lang-btn">
+      <button class="lang-trigger" title="Change language">
+        <span class="lang-flags"></span>
+        <span class="lang-code">EN</span>
+        <svg class="lang-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="6 9 12 15 18 9"/>
+        </svg>
+      </button>
+      <div class="lang-dropdown">
+        <button class="lang-option" data-lang="es" type="button">
+          <svg viewBox="0 0 24 16" width="16" height="11"><rect width="24" height="16" fill="#c60b1e"/><rect y="4" width="24" height="8" fill="#ffc400"/></svg>
+          <span style="opacity:0.3;font-size:0.6rem;line-height:1">/</span>
+          <svg viewBox="0 0 24 16" width="16" height="11"><rect width="8" height="16" fill="#006847"/><rect x="8" width="8" height="16" fill="#fff"/><rect x="16" width="8" height="16" fill="#ce1126"/></svg>
+          Español
+        </button>
+        <button class="lang-option active" data-lang="en" type="button">
+          <svg viewBox="0 0 24 16" width="16" height="11"><rect width="24" height="16" fill="#b22234"/><rect y="2" width="24" height="2" fill="#fff"/><rect y="6" width="24" height="2" fill="#fff"/><rect y="10" width="24" height="2" fill="#fff"/><rect y="14" width="24" height="2" fill="#fff"/><rect width="9.5" height="8" fill="#3c3b6e"/></svg>
+          <span style="opacity:0.3;font-size:0.6rem;line-height:1">/</span>
+          <svg viewBox="0 0 24 16" width="16" height="11"><rect width="24" height="16" fill="#fff"/><rect x="10.5" width="3" height="16" fill="#ce1124"/><rect y="6.5" width="24" height="3" fill="#ce1124"/></svg>
+          English
+        </button>
+      </div>
+    </div>
   </div>
   
   <div class="legal-page">
     <h1 data-i18n-text="privacyTitle">Política de Privacidad</h1>
-    <p class="date" data-i18n-text="privacyDate">Última actualización: 28 de abril de 2026</p>
+    <p class="date" data-i18n-text="privacyDate">Última actualización: 7 de mayo de 2026</p>
 
     <div class="highlight" data-i18n-html="privacySummary">
       <strong>Resumen:</strong> No guardamos nada. Tus archivos están cifrados. No vendemos datos. No hay tracking. Punto.
@@ -85,7 +213,7 @@
     <p data-i18n-html="privacy1Intro"><strong>Casi nada.</strong></p>
     <ul>
       <li data-i18n-html="privacy1Files"><strong>Archivos:</strong> Se cifran en tu navegador antes de subirlos. Solo guardamos bytes cifrados que expiran en 1-15 minutos.</li>
-      <li data-i18n-html="privacy1Rooms"><strong>Códigos de sala:</strong> Números aleatorios de 6 dígitos. No están vinculados a tu identidad.</li>
+      <li data-i18n-html="privacy1Rooms"><strong>Códigos de sala:</strong> Códigos alfanuméricos de 5 caracteres. No están vinculados a tu identidad.</li>
       <li data-i18n-html="privacy1Analytics"><strong>Analytics:</strong> No usamos trackers de terceros en el frontend.</li>
     </ul>
 
@@ -122,8 +250,8 @@
     <h2 data-i18n-text="privacy6Title">6. Terceros</h2>
     <p data-i18n-text="privacy6Intro">Usamos:</p>
     <ul>
-      <li data-i18n-html="privacy6Supabase"><strong>Supabase:</strong> Para almacenar archivos pequeños cifrados (&lt;50MB). <a href="https://supabase.com/privacy" target="_blank">Su política de privacidad</a>.</li>
-      <li data-i18n-html="privacy6B2"><strong>Backblaze B2:</strong> Para almacenar archivos cifrados de hasta 500MB. <a href="https://www.backblaze.com/company/privacy" target="_blank">Su política de privacidad</a>.</li>
+      <li data-i18n-html="privacy6Supabase"><strong>Supabase:</strong> Para almacenar archivos cifrados (&lt;50MB). <a href="https://supabase.com/privacy" target="_blank">Su política de privacidad</a>.</li>
+      <li data-i18n-html="privacy6R2"><strong>Cloudflare R2:</strong> Para archivos cifrados &gt;50MB. <a href="https://www.cloudflare.com/privacypolicy/" target="_blank">Su política de privacidad</a>.</li>
       <li data-i18n-html="privacy6Vercel"><strong>Vercel:</strong> Para hosting. <a href="https://vercel.com/legal/privacy-policy" target="_blank">Su política de privacidad</a>.</li>
       <li data-i18n-html="privacy6Analytics"><strong>Sin analytics de terceros:</strong> No ejecutamos trackers de analítica en el frontend.</li>
     </ul>
@@ -160,7 +288,7 @@
     const privacyTranslations = {
       es: {
         privacyTitle: "Política de Privacidad",
-        privacyDate: "Última actualización: 28 de abril de 2026",
+         privacyDate: "Última actualización: 8 de mayo de 2026",
         privacySummary: "<strong>Resumen:</strong> No guardamos nada. Tus archivos están cifrados. No vendemos datos. No hay tracking. Punto.",
         backLink: "← Volver a Ghost Drop",
         termsLink: "Términos de Servicio",
@@ -168,8 +296,8 @@
         privacy1Title: "1. Qué información recopilamos",
         privacy1Intro: "<strong>Casi nada.</strong>",
         privacy1Files: "<strong>Archivos:</strong> Se cifran en tu navegador antes de subirlos. Solo guardamos bytes cifrados que expiran en 1-15 minutos.",
-        privacy1Rooms: "<strong>Códigos de sala:</strong> Números aleatorios de 6 dígitos. No están vinculados a tu identidad.",
-        privacy1Analytics: "<strong>Analytics:</strong> No usamos trackers de terceros en el frontend.",
+        privacy1Rooms: "<strong>Códigos de sala:</strong> Códigos alfanuméricos de 5 caracteres. No están vinculados a tu identidad.",
+         privacy1Analytics: "<strong>Analytics:</strong> Usamos Umami, una herramienta de analítica que respeta la privacidad. No usamos cookies, no rastreamos usuarios individualmente y no recolectamos datos personales. Solo contamos visitas y descargas de forma anónima.",
         
         privacy2Title: "2. Qué NO recopilamos",
         privacy2Names: "❌ Nombres, emails, teléfonos",
@@ -197,10 +325,10 @@
         
         privacy6Title: "6. Terceros",
         privacy6Intro: "Usamos:",
-        privacy6Supabase: '<strong>Supabase:</strong> Para almacenar archivos pequeños cifrados (&lt;50MB). <a href="https://supabase.com/privacy" target="_blank">Su política de privacidad</a>.',
-        privacy6B2: '<strong>Backblaze B2:</strong> Para almacenar archivos cifrados de hasta 500MB. <a href="https://www.backblaze.com/company/privacy" target="_blank">Su política de privacidad</a>.',
+        privacy6Supabase: '<strong>Supabase:</strong> Para almacenar archivos cifrados (&lt;50MB). <a href="https://supabase.com/privacy" target="_blank">Su política de privacidad</a>.',
+        privacy6R2: '<strong>Cloudflare R2:</strong> Para archivos cifrados &gt;50MB (hasta 250MB). <a href="https://www.cloudflare.com/privacypolicy/" target="_blank">Su política de privacidad</a>.',
         privacy6Vercel: '<strong>Vercel:</strong> Para hosting. <a href="https://vercel.com/legal/privacy-policy" target="_blank">Su política de privacidad</a>.',
-        privacy6Analytics: "<strong>Sin analytics de terceros:</strong> No ejecutamos trackers de analítica en el frontend.",
+         privacy6Analytics: '<strong>Umami:</strong> Para analíticas de uso anónimas (sin cookies, sin tracking de usuarios). <a href="https://umami.is/privacy" target="_blank">Su política de privacidad</a>.',
         privacy6Encrypted: "Ninguno de ellos puede leer tus archivos porque están cifrados.",
         
         privacy7Title: "7. Tus derechos",
@@ -220,7 +348,7 @@
       },
       en: {
         privacyTitle: "Privacy Policy",
-        privacyDate: "Last updated: April 28, 2026",
+         privacyDate: "Last updated: May 8, 2026",
         privacySummary: "<strong>Summary:</strong> We don't store anything. Your files are encrypted. We don't sell data. No tracking. Period.",
         backLink: "← Back to Ghost Drop",
         termsLink: "Terms of Service",
@@ -228,8 +356,8 @@
         privacy1Title: "1. What information we collect",
         privacy1Intro: "<strong>Almost nothing.</strong>",
         privacy1Files: "<strong>Files:</strong> Encrypted in your browser before upload. We only store encrypted bytes that expire in 1-15 minutes.",
-        privacy1Rooms: "<strong>Room codes:</strong> Random 6-digit numbers. Not linked to your identity.",
-        privacy1Analytics: "<strong>Analytics:</strong> We do not run third-party analytics trackers in the frontend.",
+        privacy1Rooms: "<strong>Room codes:</strong> Random 5-char codes. Not linked to your identity.",
+         privacy1Analytics: "<strong>Analytics:</strong> We use Umami, a privacy-friendly analytics tool. We don't use cookies, we don't track individual users, and we don't collect personal data. We only count visits and downloads anonymously.",
         
         privacy2Title: "2. What we DON'T collect",
         privacy2Names: "❌ Names, emails, phone numbers",
@@ -257,10 +385,10 @@
         
         privacy6Title: "6. Third parties",
         privacy6Intro: "We use:",
-        privacy6Supabase: '<strong>Supabase:</strong> To store small encrypted files (&lt;50MB). <a href="https://supabase.com/privacy" target="_blank">Their privacy policy</a>.',
-        privacy6B2: '<strong>Backblaze B2:</strong> To store encrypted files up to 500MB. <a href="https://www.backblaze.com/company/privacy" target="_blank">Their privacy policy</a>.',
+        privacy6Supabase: '<strong>Supabase:</strong> To store encrypted files (&lt;50MB). <a href="https://supabase.com/privacy" target="_blank">Their privacy policy</a>.',
+        privacy6R2: '<strong>Cloudflare R2:</strong> For encrypted files &gt;50MB (up to 250MB). <a href="https://www.cloudflare.com/privacypolicy/" target="_blank">Their privacy policy</a>.',
         privacy6Vercel: '<strong>Vercel:</strong> For hosting. <a href="https://vercel.com/legal/privacy-policy" target="_blank">Their privacy policy</a>.',
-        privacy6Analytics: "<strong>No third-party analytics:</strong> We do not run analytics trackers in the frontend.",
+         privacy6Analytics: '<strong>Umami:</strong> For anonymous usage analytics (no cookies, no user tracking). <a href="https://umami.is/privacy" target="_blank">Their privacy policy</a>.',
         privacy6Encrypted: "None of them can read your files because they're encrypted.",
         
         privacy7Title: "7. Your rights",
@@ -299,20 +427,21 @@
       // Actualizar título de la página
       document.title = t.privacyTitle + " — Ghost Drop";
       
-      // Actualizar botón de idioma
+      // Actualizar botón de idioma (i18n.js se encarga del .lang-code)
       const langBtn = document.getElementById('lang-btn');
       if (langBtn) {
-        langBtn.textContent = lang === 'es' ? 'EN' : 'ES';
         langBtn.title = lang === 'es' ? 'Switch to English' : 'Cambiar a Español';
       }
       
       document.documentElement.lang = lang;
     }
     
-    // Event listener para botón de idioma
-    document.getElementById('lang-btn')?.addEventListener('click', () => {
-      window.i18n.toggleLanguage();
-      updatePrivacyPage();
+    // Delegated listener (sobrevive al clone de i18n.js)
+    document.body.addEventListener('click', function langDelegate(e) {
+      if (!e.target.closest('#lang-btn')) return;
+      if (e.target.closest('.lang-option')) {
+        setTimeout(updatePrivacyPage, 50);
+      }
     });
     
     // Actualizar al cargar

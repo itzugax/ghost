@@ -28,6 +28,14 @@
     {
       "source": "/setup-cors",
       "destination": "/api/b2-proxy"
+    },
+    {
+      "source": "/setup-cors-native",
+      "destination": "/api/b2-proxy"
+    },
+    {
+      "source": "/setup-cors-clear-native",
+      "destination": "/api/b2-proxy"
     }
   ],
   "headers": [

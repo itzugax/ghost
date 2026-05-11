@@ -7,17 +7,123 @@
   <link rel="stylesheet" href="style.css" />
   <style>
     .legal-header {
-      max-width: 680px;
+      max-width: 896px;
       margin: 0 auto;
-      padding: 1.5rem 1.5rem 0;
+      padding: 2.5rem 2rem 0;
       display: flex;
       justify-content: space-between;
       align-items: center;
     }
     .legal-page {
-      max-width: 680px;
+      max-width: 896px;
       margin: 0 auto;
-      padding: 1rem 1.5rem 2rem;
+      padding: 2rem 2rem 3rem;
+    }
+    .lang-switcher {
+      position: relative;
+      z-index: 100;
+    }
+    .lang-trigger {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 0.5rem 0.875rem;
+      background: rgba(255,255,255,0.06);
+      -webkit-backdrop-filter: blur(16px);
+      backdrop-filter: blur(16px);
+      border: 2px solid rgba(59,130,246,0.25);
+      border-radius: 9999px;
+      color: var(--text);
+      font-size: 0.8125rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.25s ease;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.12), 0 0 14px rgba(59,130,246,0.15);
+      line-height: 1;
+    }
+    .lang-trigger:hover {
+      background: rgba(255,255,255,0.12);
+      border-color: rgba(59,130,246,0.5);
+      box-shadow: 0 4px 20px rgba(59,130,246,0.35), 0 0 28px rgba(59,130,246,0.2);
+    }
+    .lang-flags {
+      display: inline-flex;
+      align-items: center;
+      gap: 2px;
+      flex-shrink: 0;
+      line-height: 1;
+    }
+    .lang-chevron {
+      width: 10px;
+      height: 10px;
+      opacity: 0.5;
+      flex-shrink: 0;
+      transition: transform 0.2s ease;
+    }
+    .lang-switcher.open .lang-chevron {
+      transform: rotate(180deg);
+    }
+    .lang-dropdown {
+      position: absolute;
+      top: calc(100% + 6px);
+      right: 0;
+      min-width: 150px;
+      background: rgba(18, 22, 36, 0.92);
+      -webkit-backdrop-filter: blur(24px);
+      backdrop-filter: blur(24px);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 14px;
+      padding: 4px;
+      opacity: 0;
+      transform: translateY(-6px) scale(0.96);
+      pointer-events: none;
+      transition: all 0.2s ease;
+      box-shadow: 0 12px 40px rgba(0,0,0,0.4), 0 0 0 1px rgba(255,255,255,0.03);
+    }
+    .lang-dropdown::before {
+      content: '';
+      position: absolute;
+      top: -6px;
+      left: 0;
+      right: 0;
+      height: 6px;
+      background: transparent;
+    }
+    .lang-switcher:hover .lang-dropdown,
+    .lang-switcher.open .lang-dropdown {
+      opacity: 1;
+      transform: translateY(0) scale(1);
+      pointer-events: auto;
+    }
+    .lang-option {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      width: 100%;
+      padding: 0.5rem 0.75rem;
+      background: none;
+      border: none;
+      border-radius: 10px;
+      color: rgba(255,255,255,0.6);
+      font-size: 0.8125rem;
+      cursor: pointer;
+      transition: all 0.15s ease;
+      text-align: left;
+    }
+    .lang-option:hover {
+      background: rgba(59,130,246,0.15);
+      color: #fff;
+    }
+    .lang-option.active {
+      color: #60a5fa;
+      font-weight: 600;
+    }
+    .lang-option svg {
+      flex-shrink: 0;
+      border-radius: 2px;
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .lang-dropdown { transition: none !important; }
     }
     .legal-page h1 {
       font-size: 2.5rem;
@@ -77,12 +183,34 @@
 <body>
   <div class="legal-header">
     <a href="./index.html" class="back-link" data-i18n-text="backLink">← Volver a Ghost Drop</a>
-    <button id="lang-btn" class="lang-btn" title="Change language">EN</button>
+    <div class="lang-switcher" id="lang-btn">
+      <button class="lang-trigger" title="Change language">
+        <span class="lang-flags"></span>
+        <span class="lang-code">EN</span>
+        <svg class="lang-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="6 9 12 15 18 9"/>
+        </svg>
+      </button>
+      <div class="lang-dropdown">
+        <button class="lang-option" data-lang="es" type="button">
+          <svg viewBox="0 0 24 16" width="16" height="11"><rect width="24" height="16" fill="#c60b1e"/><rect y="4" width="24" height="8" fill="#ffc400"/></svg>
+          <span style="opacity:0.3;font-size:0.6rem;line-height:1">/</span>
+          <svg viewBox="0 0 24 16" width="16" height="11"><rect width="8" height="16" fill="#006847"/><rect x="8" width="8" height="16" fill="#fff"/><rect x="16" width="8" height="16" fill="#ce1126"/></svg>
+          Español
+        </button>
+        <button class="lang-option active" data-lang="en" type="button">
+          <svg viewBox="0 0 24 16" width="16" height="11"><rect width="24" height="16" fill="#b22234"/><rect y="2" width="24" height="2" fill="#fff"/><rect y="6" width="24" height="2" fill="#fff"/><rect y="10" width="24" height="2" fill="#fff"/><rect y="14" width="24" height="2" fill="#fff"/><rect width="9.5" height="8" fill="#3c3b6e"/></svg>
+          <span style="opacity:0.3;font-size:0.6rem;line-height:1">/</span>
+          <svg viewBox="0 0 24 16" width="16" height="11"><rect width="24" height="16" fill="#fff"/><rect x="10.5" width="3" height="16" fill="#ce1124"/><rect y="6.5" width="24" height="3" fill="#ce1124"/></svg>
+          English
+        </button>
+      </div>
+    </div>
   </div>
   
   <div class="legal-page">
     <h1 data-i18n-text="termsTitle">Términos de Servicio</h1>
-    <p class="date" data-i18n-text="termsDate">Última actualización: 28 de abril de 2026</p>
+    <p class="date" data-i18n-text="termsDate">Última actualización: 7 de mayo de 2026</p>
 
     <div class="highlight" data-i18n-html="termsSummary">
       <strong>Resumen:</strong> Usa Ghost Drop para compartir archivos legales. No abuses. No garantizamos nada. Es gratis. No nos demandes.
@@ -124,7 +252,7 @@
 
     <h2 data-i18n-text="terms4Title">4. Límites del servicio</h2>
     <ul>
-      <li data-i18n-text="terms4Size">Máximo 5 GB por archivo</li>
+      <li data-i18n-text="terms4Size">Máximo 250 MB por archivo</li>
       <li data-i18n-text="terms4Rate">Máximo 15 archivos por minuto (rate limiting)</li>
       <li data-i18n-text="terms4Expire">Los archivos expiran en 1-15 minutos</li>
     </ul>
@@ -220,7 +348,7 @@
     const termsTranslations = {
       es: {
         termsTitle: "Términos de Servicio",
-        termsDate: "Última actualización: 28 de abril de 2026",
+        termsDate: "Última actualización: 7 de mayo de 2026",
         termsSummary: "<strong>Resumen:</strong> Usa Ghost Drop para compartir archivos legales. No abuses. No garantizamos nada. Es gratis. No nos demandes.",
         backLink: "← Volver a Ghost Drop",
         privacyLink: "Política de Privacidad",
@@ -250,7 +378,8 @@
         terms3Warning: "<strong>⚠️ Importante:</strong> Aunque no podemos ver el contenido de tus archivos (están cifrados), NO uses Ghost Drop para actividades ilegales. Eres responsable de cumplir las leyes de tu país.",
         
         terms4Title: "4. Límites del servicio",
-        terms4Size: "Máximo 5 GB por archivo",
+        terms4Size: "Máximo 250 MB por archivo",
+        terms4B2: '<strong>⚠️ Archivos grandes:</strong> El soporte para archivos &gt;50MB está temporalmente desactivado mientras migramos a un sistema de almacenamiento más robusto. Esperamos restaurarlo pronto. Disculpa las molestias.',
         terms4Rate: "Máximo 15 archivos por minuto (rate limiting)",
         terms4Expire: "Los archivos expiran en 1-15 minutos",
         terms4Change: "Nos reservamos el derecho de cambiar estos límites sin previo aviso.",
@@ -316,7 +445,7 @@
       },
       en: {
         termsTitle: "Terms of Service",
-        termsDate: "Last updated: April 28, 2026",
+        termsDate: "Last updated: May 7, 2026",
         termsSummary: "<strong>Summary:</strong> Use Ghost Drop to share legal files. Don't abuse it. We don't guarantee anything. It's free. Don't sue us.",
         backLink: "← Back to Ghost Drop",
         privacyLink: "Privacy Policy",
@@ -346,7 +475,8 @@
         terms3Warning: "<strong>⚠️ Important:</strong> Although we can't see the content of your files (they're encrypted), DO NOT use Ghost Drop for illegal activities. You are responsible for complying with your country's laws.",
         
         terms4Title: "4. Service limits",
-        terms4Size: "Maximum 5 GB per file",
+        terms4Size: "Maximum 250 MB per file",
+        terms4B2: '<strong>⚠️ Large files:</strong> Support for files &gt;50MB is temporarily disabled while we migrate to a more robust storage system. We hope to restore it soon. Sorry for the inconvenience.',
         terms4Rate: "Maximum 15 files per minute (rate limiting)",
         terms4Expire: "Files expire in 1-15 minutes",
         terms4Change: "We reserve the right to change these limits without notice.",
@@ -431,20 +561,21 @@
       // Actualizar título de la página
       document.title = t.termsTitle + " — Ghost Drop";
       
-      // Actualizar botón de idioma
+      // Actualizar botón de idioma (i18n.js se encarga del .lang-code)
       const langBtn = document.getElementById('lang-btn');
       if (langBtn) {
-        langBtn.textContent = lang === 'es' ? 'EN' : 'ES';
         langBtn.title = lang === 'es' ? 'Switch to English' : 'Cambiar a Español';
       }
       
       document.documentElement.lang = lang;
     }
     
-    // Event listener para botón de idioma
-    document.getElementById('lang-btn')?.addEventListener('click', () => {
-      window.i18n.toggleLanguage();
-      updateTermsPage();
+    // Delegated listener (sobrevive al clone de i18n.js)
+    document.body.addEventListener('click', function langDelegate(e) {
+      if (!e.target.closest('#lang-btn')) return;
+      if (e.target.closest('.lang-option')) {
+        setTimeout(updateTermsPage, 50);
+      }
     });
     
     // Actualizar al cargar

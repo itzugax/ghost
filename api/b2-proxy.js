@@ -222,7 +222,7 @@ app.get('/health', (req, res) => {
   res.json(config);
 });
 
-// Endpoint para configurar CORS en B2
+// Endpoint para configurar CORS en B2 via S3 API
 app.post('/setup-cors', async (req, res) => {
   if (!ALLOW_SETUP_CORS) {
     return res.status(403).json({ error: 'Endpoint disabled in this environment' });
@@ -254,6 +254,133 @@ app.post('/setup-cors', async (req, res) => {
     
   } catch (error) {
     console.error('❌ Error configurando CORS:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Endpoint para configurar CORS via B2 NATIVE API (cuando S3 PutBucketCors falla)
+app.post('/setup-cors-native', async (req, res) => {
+  if (!ALLOW_SETUP_CORS) {
+    return res.status(403).json({ error: 'Endpoint disabled in this environment' });
+  }
+  try {
+    // 1. Autenticar con B2 Native API
+    const cred = Buffer.from(`${process.env.B2_KEY_ID}:${process.env.B2_APPLICATION_KEY}`).toString('base64');
+    const authRes = await fetch('https://api.backblazeb2.com/b2api/v2/b2_authorize_account', {
+      headers: { 'Authorization': `Basic ${cred}` },
+    });
+    if (!authRes.ok) {
+      const err = await authRes.text();
+      throw new Error(`B2 auth failed: ${err}`);
+    }
+    const auth = await authRes.json();
+    const apiUrl = auth.apiUrl + '/b2api/v2';
+
+    // 2. Obtener accountId y bucketId desde la respuesta de auth
+    const accountId = auth.accountId;
+    const bucketId = auth.allowed?.bucketId;
+    if (!accountId) throw new Error('No accountId in auth response');
+    if (!bucketId) throw new Error('No bucketId in auth response. Key may not be scoped to a bucket.');
+
+    // 3. Preparar regla CORS con S3 operations incluidas
+    const newRule = {
+      corsRuleName: 'ghost-drop-cors',
+      allowedOrigins: ['*'],
+      allowedHeaders: ['*'],
+      allowedOperations: [
+        'b2_download_file_by_id',
+        'b2_download_file_by_name',
+        'b2_upload_file',
+        'b2_upload_part',
+        's3_head',
+        's3_get',
+        's3_put',
+        's3_delete',
+      ],
+      maxAgeSeconds: 3600,
+    };
+
+    // 4. Actualizar bucket con las reglas CORS (Sobreescribe las reglas existentes)
+    const updateRes = await fetch(`${apiUrl}/b2_update_bucket`, {
+      method: 'POST',
+      headers: { 'Authorization': auth.authorizationToken },
+      body: JSON.stringify({
+        accountId,
+        bucketId,
+        corsRules: [newRule],
+      }),
+    });
+
+    if (!updateRes.ok) {
+      const errText = await updateRes.text();
+      let errMsg = `B2 update failed`;
+      try { const e = JSON.parse(errText); errMsg = e.message || e.code || errText; } catch {}
+      throw new Error(errMsg);
+    }
+
+    const result = await updateRes.json();
+    console.log('✅ CORS configurado via Native API');
+    res.json({ 
+      success: true, 
+      message: 'CORS configurado via B2 Native API',
+      corsRules: result.corsRules,
+    });
+
+  } catch (error) {
+    console.error('❌ Error configurando CORS (native):', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Endpoint para LIMPIAR todas las reglas CORS nativas de B2
+// Necesario para poder usar S3 PutBucketCors (los dos sistemas son incompatibles)
+app.post('/setup-cors-clear-native', async (req, res) => {
+  if (!ALLOW_SETUP_CORS) {
+    return res.status(403).json({ error: 'Endpoint disabled in this environment' });
+  }
+  try {
+    const cred = Buffer.from(`${process.env.B2_KEY_ID}:${process.env.B2_APPLICATION_KEY}`).toString('base64');
+    const authRes = await fetch('https://api.backblazeb2.com/b2api/v2/b2_authorize_account', {
+      headers: { 'Authorization': `Basic ${cred}` },
+    });
+    if (!authRes.ok) {
+      const err = await authRes.text();
+      throw new Error(`B2 auth failed: ${err}`);
+    }
+    const auth = await authRes.json();
+    const apiUrl = auth.apiUrl + '/b2api/v2';
+    const accountId = auth.accountId;
+    const bucketId = auth.allowed?.bucketId;
+    if (!accountId) throw new Error('No accountId in auth response');
+    if (!bucketId) throw new Error('No bucketId in auth response');
+
+    const updateRes = await fetch(`${apiUrl}/b2_update_bucket`, {
+      method: 'POST',
+      headers: { 'Authorization': auth.authorizationToken },
+      body: JSON.stringify({
+        accountId,
+        bucketId,
+        corsRules: [],
+      }),
+    });
+
+    if (!updateRes.ok) {
+      const errText = await updateRes.text();
+      let errMsg = 'B2 update failed';
+      try { const e = JSON.parse(errText); errMsg = e.message || e.code || errText; } catch {}
+      throw new Error(errMsg);
+    }
+
+    const result = await updateRes.json();
+    console.log('✅ Reglas CORS nativas eliminadas');
+    res.json({
+      success: true,
+      message: 'Todas las reglas CORS nativas eliminadas. Ahora puedes usar /setup-cors (S3).',
+      corsRules: result.corsRules,
+    });
+
+  } catch (error) {
+    console.error('❌ Error limpiando CORS nativo:', error);
     res.status(500).json({ error: error.message });
   }
 });

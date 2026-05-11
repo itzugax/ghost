@@ -4,6 +4,8 @@
 
 The fastest way to share files. Generate a 6-digit room code, drag your files, share the code. Files auto-destruct after a configurable time (1-15 minutes). Zero registration.
 
+🔥 **Live on Product Hunt!** [gdrop.vercel.app](https://gdrop.vercel.app)
+
 ---
 
 ## Why it's different
@@ -16,7 +18,7 @@ The fastest way to share files. Generate a 6-digit room code, drag your files, s
 | ❌ Permanent files | ✅ Auto-destruction |
 | ❌ 5 minutes setup | ✅ 5 seconds |
 | ❌ Opaque or no encryption | ✅ Transparent E2E encryption |
-| ❌ 50MB limit | ✅ Up to 500MB (Backblaze B2) |
+| ❌ Limited free tiers | ✅ Free, no account needed |
 
 ## 🔐 Security
 
@@ -161,9 +163,9 @@ const SUPABASE_ANON_KEY = "YOUR_ANON_KEY";
 
 > **Note:** `supabase-config.js` is git-ignored. Never commit your real credentials.
 
-### Optional: Backblaze B2 for large files
+### ~~Optional: Backblaze B2 for large files~~ → Replaced by Cloudflare R2
 
-For files up to 500MB, configure Backblaze B2 via the proxy server (`b2-proxy.js`). See comments in the file for setup.
+Ghost Drop now uses **Cloudflare R2** for files >50MB (up to 500MB) via presigned URLs. R2 is compatible with the S3 API and uses a Cloudflare Worker to generate temporary signed URLs. See `cloudflare-worker-r2.js` for the Worker code.
 
 ---
 
@@ -185,21 +187,24 @@ npx serve .
 
 ```
 ghost-drop/
-├── index.html           # Main UI (SPA)
-├── style.css            # Apple-inspired design system
+├── app.html             # Main app (SPA)
+├── index.html           # Landing page
+├── style.css            # Design system (dark mode)
 ├── app.js               # Core logic (rooms, upload, download, realtime)
 ├── crypto.js            # E2E encryption/decryption (Web Crypto API)
 ├── i18n.js              # Internationalization (ES/EN)
-├── landing.html         # Landing page
 ├── privacy.html         # Privacy policy
 ├── terms.html           # Terms of service
-├── storage-b2-client.js # Backblaze B2 browser client
-├── b2-proxy.js          # Express.js B2 proxy server
+├── storage-b2-client.js # R2 client (presigned URLs via Worker)
+├── api/
+│   └── b2-proxy.js      # Vercel B2 proxy (legacy, B2 disabled)
 ├── supabase-config.js   # Supabase credentials
 ├── supabase.min.js      # Supabase JS SDK
 ├── sw.js                # Service Worker (PWA)
 ├── manifest.json        # PWA manifest
 ├── vercel.json          # Vercel deployment config
+├── cloudflare-worker-b2.js # Legacy B2 Worker (no funcional)
+cloudflare-worker-r2.js # Worker: presigned URLs for R2
 └── og-image.svg         # Open Graph image
 ```
 

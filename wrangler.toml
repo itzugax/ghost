@@ -1,0 +1,6 @@
+name = "r2-ghost"
+main = "cloudflare-worker-r2.js"
+compatibility_date = "2026-05-08"
+
+[vars]
+R2_BUCKET = "ghost-drop"

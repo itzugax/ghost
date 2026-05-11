@@ -20,7 +20,7 @@ const translations = {
     
     // Room section
     roomTitle: "Entrar a una sala",
-    roomDesc: "Usa un código de 6 dígitos para compartir con quien quieras, desde cualquier red.",
+    roomDesc: "Usa un código de 5 caracteres para compartir con quien quieras, desde cualquier red.",
     joinBtn: "Entrar",
     newRoomBtn: "🎲 Sala aleatoria",
     recentLabel: "Recientes",
@@ -28,7 +28,7 @@ const translations = {
     // Drop section
     dropTitle: "Compartir archivo",
     dropLabel: "Arrastra archivos aquí",
-    dropSub: "o toca para seleccionar · <strong>Máx: 500MB</strong>",
+    dropSub: "o toca para seleccionar · <strong>Máx: 250MB</strong></small>",
     
     // Text section
     textTitle: "Compartir texto / enlace",
@@ -65,7 +65,7 @@ const translations = {
     // Onboarding
     onboardingTitle: "¡Bienvenido a Ghost Drop!",
     onboardingDesc: "Compartir archivos nunca fue tan fácil:",
-    onboardingStep1: "Crea una sala con 6 dígitos",
+    onboardingStep1: "Crea una sala con 5 caracteres",
     onboardingStep2: "Arrastra tus archivos",
     onboardingStep3: "Comparte el código",
     onboardingCta: "Entendido, empecemos 🚀",
@@ -76,7 +76,8 @@ const translations = {
     toastUploading: "Subiendo {file}…",
     toastErrorEncrypt: "Error cifrando: {error}",
     toastError: "Error: {error}",
-    toastFileTooLarge: "❌ {file} es demasiado grande. Máximo: 500MB",
+    toastFileTooLarge: "❌ {file} es demasiado grande. Máximo: 250MB (actual: {size})",
+    toastB2Disabled: "Servicio de archivos grandes no disponible. Intenta de nuevo. 🙏",
     toastLinkCopied: "🔗 Enlace copiado. Compártelo por WhatsApp, email, etc.",
     toastCopied: "¡Copiado!",
     toastSomeoneJoined: "Alguien entró a la sala",
@@ -90,8 +91,18 @@ const translations = {
     toastDownloaded: "{n} archivo(s) descargados{burn} ✓",
     toastDeleting: "Borrando {n} archivo(s) con burn after reading…",
     toastNoFiles: "No se pudo descargar ningún archivo",
-    toastCodeRequired: "Código de 6 dígitos",
+    toastDecrypting: "Descifrando…",
+    toastErrorDecrypt: "Error descifrando: {error}",
+    toastBurning: "Eliminando archivo (burn after reading)…",
+    toastDownloadedBurned: "Descargado y eliminado ✓",
+    toastDownloadComplete: "Descarga completada: {file} ✓",
+    toastErrorDownload: "Error descargando: {error}",
+    toastDownloadQueued: "Descarga en cola ({n} esperando)",
+    toastCodeRequired: "Código de 5 caracteres",
     toastLinkCopiedClipboard: "Link copiado al portapapeles",
+    dlProgress: "Descargando: {loaded} / {total}",
+    toastDownloadingSimple: "Descargando…",
+    dlProgressSimple: "Descargando: {loaded}…",
     
     // Progress
     progressSaving: "Guardando en base de datos...",
@@ -112,7 +123,7 @@ const translations = {
     footerPrivacy: "Privacidad",
     footerTerms: "Términos",
     footerOpenSource: "Open Source",
-    footerCopyright: "© 2026 Ugax. Todos los derechos reservados.",
+    footerCopyright: "© 2026 Jorge Ugas. Todos los derechos reservados.",
     footerStats: "✦ {n} archivo{s} compartido{s} hasta ahora",
     
     // Notifications
@@ -128,6 +139,13 @@ const translations = {
     errorTimeout: "La subida tardó demasiado. Intenta con un archivo más pequeño",
     errorCors: "Error de configuración. Contacta al administrador",
     errorNetwork: "Error de red",
+    errorUpload: "Error subiendo archivo",
+    errorAuth: "Error de autenticación con el servidor de archivos",
+    errorJSZip: "JSZip no está cargado",
+    toastNoFilesToDownload: "No hay archivos para descargar",
+    toastUploaded: "{n} archivo(s) compartido(s) ✓",
+    toastTextShared: "Texto compartido ✓",
+    toastInvalidChar: '"{char}" no válido. Usa: 2-9, A-Z (sin 0,1,B,I,O,Q,V)',
     
     // Time units
     timeSeconds: "{n}s",
@@ -158,7 +176,7 @@ const translations = {
     
     // Room section
     roomTitle: "Join a room",
-    roomDesc: "Use a 6-digit code to share with anyone, from any network.",
+    roomDesc: "Use a 5-character code to share with anyone, from any network.",
     joinBtn: "Join",
     newRoomBtn: "🎲 Random room",
     recentLabel: "Recent",
@@ -166,7 +184,7 @@ const translations = {
     // Drop section
     dropTitle: "Share file",
     dropLabel: "Drag files here",
-    dropSub: "or tap to select · <strong>Max: 500MB</strong>",
+    dropSub: "or tap to select · <strong>Max: 250MB</strong></small>",
     
     // Text section
     textTitle: "Share text / link",
@@ -203,7 +221,7 @@ const translations = {
     // Onboarding
     onboardingTitle: "Welcome to Ghost Drop!",
     onboardingDesc: "Sharing files has never been easier:",
-    onboardingStep1: "Create a room with 6 digits",
+    onboardingStep1: "Create a room with 5 characters",
     onboardingStep2: "Drag your files",
     onboardingStep3: "Share the code",
     onboardingCta: "Got it, let's start 🚀",
@@ -214,7 +232,8 @@ const translations = {
     toastUploading: "Uploading {file}…",
     toastErrorEncrypt: "Encryption error: {error}",
     toastError: "Error: {error}",
-    toastFileTooLarge: "❌ {file} is too large. Max: 500MB",
+    toastFileTooLarge: "❌ {file} is too large. Max: 250MB (actual: {size})",
+    toastB2Disabled: "Large file service unavailable. Try again. 🙏",
     toastLinkCopied: "🔗 Link copied. Share it via WhatsApp, email, etc.",
     toastCopied: "Copied!",
     toastSomeoneJoined: "Someone joined the room",
@@ -228,8 +247,18 @@ const translations = {
     toastDownloaded: "{n} file(s) downloaded{burn} ✓",
     toastDeleting: "Deleting {n} file(s) with burn after reading…",
     toastNoFiles: "Could not download any files",
-    toastCodeRequired: "6-digit code required",
+    toastDecrypting: "Decrypting…",
+    toastErrorDecrypt: "Decrypt error: {error}",
+    toastBurning: "Deleting file (burn after reading)…",
+    toastDownloadedBurned: "Downloaded and deleted ✓",
+    toastDownloadComplete: "Download complete: {file} ✓",
+    toastErrorDownload: "Download error: {error}",
+    toastDownloadQueued: "Download queued ({n} waiting)",
+    toastCodeRequired: "5-character code required",
     toastLinkCopiedClipboard: "Link copied to clipboard",
+    dlProgress: "Downloading: {loaded} / {total}",
+    toastDownloadingSimple: "Downloading…",
+    dlProgressSimple: "Downloading: {loaded}…",
     
     // Progress
     progressSaving: "Saving to database...",
@@ -250,7 +279,7 @@ const translations = {
     footerPrivacy: "Privacy",
     footerTerms: "Terms",
     footerOpenSource: "Open Source",
-    footerCopyright: "© 2026 Ugax. All rights reserved.",
+    footerCopyright: "© 2026 Jorge Ugas. All rights reserved.",
     footerStats: "✦ {n} file{s} shared so far",
     
     // Notifications
@@ -265,6 +294,13 @@ const translations = {
     errorTooLarge: "File too large to upload",
     errorTimeout: "Upload took too long. Try a smaller file",
     errorCors: "Configuration error. Contact administrator",
+    errorUpload: "Error uploading file",
+    errorAuth: "Authentication error with file server",
+    errorJSZip: "JSZip is not loaded",
+    toastNoFilesToDownload: "No files to download",
+    toastUploaded: "{n} file(s) shared ✓",
+    toastTextShared: "Text shared ✓",
+    toastInvalidChar: '"{char}" invalid. Use: 2-9, A-Z (no 0,1,B,I,O,Q,V)',
     errorNetwork: "Network error",
     
     // Time units
@@ -335,11 +371,35 @@ function applyTranslations(lang) {
   console.log('🌐 Idioma aplicado:', lang);
 }
 
+function getFlagsHTML(lang) {
+  const esp = '<svg viewBox="0 0 24 16" width="15" height="10" style="flex-shrink:0;border-radius:1.5px"><rect width="24" height="16" fill="#c60b1e"/><rect y="4" width="24" height="8" fill="#ffc400"/></svg>';
+  const mex = '<svg viewBox="0 0 24 16" width="15" height="10" style="flex-shrink:0;border-radius:1.5px"><rect width="8" height="16" fill="#006847"/><rect x="8" width="8" height="16" fill="#fff"/><rect x="16" width="8" height="16" fill="#ce1126"/></svg>';
+  const usa = '<svg viewBox="0 0 24 16" width="15" height="10" style="flex-shrink:0;border-radius:1.5px"><rect width="24" height="16" fill="#b22234"/><rect y="2" width="24" height="2" fill="#fff"/><rect y="6" width="24" height="2" fill="#fff"/><rect y="10" width="24" height="2" fill="#fff"/><rect y="14" width="24" height="2" fill="#fff"/><rect width="9.5" height="8" fill="#3c3b6e"/></svg>';
+  const eng = '<svg viewBox="0 0 24 16" width="15" height="10" style="flex-shrink:0;border-radius:1.5px"><rect width="24" height="16" fill="#fff"/><rect x="10.5" width="3" height="16" fill="#ce1124"/><rect y="6.5" width="24" height="3" fill="#ce1124"/></svg>';
+  const sep = '<span style="opacity:0.25;font-size:0.5rem;line-height:1">/</span>';
+  return lang === 'es' ? esp + sep + mex : usa + sep + eng;
+}
+
 function updateLanguageButton() {
   const langBtn = document.getElementById('lang-btn');
   if (langBtn) {
-    langBtn.textContent = currentLang === 'es' ? 'EN' : 'ES';
-    langBtn.title = currentLang === 'es' ? 'Switch to English' : 'Cambiar a Español';
+    const langCode = langBtn.querySelector('.lang-code');
+    const langFlags = langBtn.querySelector('.lang-flags');
+    
+    if (langCode) {
+      langCode.textContent = currentLang === 'es' ? 'ES' : 'EN';
+    }
+    
+    if (langFlags) {
+      langFlags.innerHTML = getFlagsHTML(currentLang);
+    }
+    
+    // Update active state in dropdown options
+    langBtn.querySelectorAll('.lang-option').forEach(opt => {
+      opt.classList.toggle('active', opt.dataset.lang === currentLang);
+    });
+    
+    langBtn.title = currentLang === 'es' ? 'Cambiar a inglés' : 'Switch to Spanish';
   }
 }
 
@@ -454,19 +514,40 @@ function forceInitUntilWorks() {
     // Marcar como configurado ANTES de agregar evento
     newLangBtn.dataset.i18nConfigured = 'true';
     
-    // Agregar evento con múltiples métodos
+    // Agregar evento para dropdown
     const clickHandler = function(e) {
-      e.preventDefault();
+      // Dropdown option click: switch language (let event bubble for subpages)
+      const option = e.target.closest('.lang-option');
+      if (option) {
+        e.preventDefault();
+        const lang = option.dataset.lang;
+        if (lang) {
+          applyTranslations(lang);
+        }
+        newLangBtn.classList.remove('open');
+        if (typeof window.i18n?.__haptic === 'function') window.i18n.__haptic();
+        return;
+      }
+      
+      // Trigger click: toggle dropdown (mobile/touch support)
       e.stopPropagation();
-      console.log('🌐 ¡Click detectado! Cambiando idioma...');
-      toggleLanguage();
+      if (e.target.closest('.lang-trigger, .lang-code, .lang-chevron, .lang-globe')) {
+        e.preventDefault();
+        newLangBtn.classList.toggle('open');
+      }
     };
     
-    // Método 1: addEventListener
+    // Único método: addEventListener
     newLangBtn.addEventListener('click', clickHandler);
     
-    // Método 2: onclick como backup
-    newLangBtn.onclick = clickHandler;
+    // Cerrar dropdown al hacer clic fuera
+    document.addEventListener('click', function closeOutside(e) {
+      document.querySelectorAll('.lang-switcher.open').forEach(el => {
+        if (!el.contains(e.target)) {
+          el.classList.remove('open');
+        }
+      });
+    });
     
     // Método 3: Verificar que el evento se agregó
     setTimeout(() => {

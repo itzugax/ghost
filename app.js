@@ -3,7 +3,7 @@
 // ============================================================
 
 // Importar módulo de Backblaze B2
-import { uploadToB2, downloadFromB2, deleteFromB2 } from './storage-b2-client.js';
+import { uploadToB2, downloadFromB2, deleteFromB2, testB2Connection } from './storage-b2-client.js';
 
 // Acceso a variables globales desde módulos ES6
 const db = window.db;
@@ -88,12 +88,134 @@ function formatCountdown(s) {
   return `${m}:${sec}`;
 }
 
+// ─── Lista negra de códigos prohibidos ────────────────────
+const BLACKLISTED_CODES = new Set([
+  // Códigos administrativos/sistema
+  "ADMIN", "GHOST", "SUPER", "OWNER", "STAFF",
+  // Códigos ofensivos comunes
+  "FUCK", "SHIT", "DAMN", "HELL", "CRAP",
+  // Códigos que podrían causar confusión
+  "TEST", "DEBUG", "ERROR", "NULL", "EMPTY",
+  // Patrones secuenciales obvios
+  "23456", "34567", "45678", "56789", "67892",
+  "98765", "87654", "76543", "65432", "54323",
+  // Patrones repetitivos
+  "22222", "33333", "44444", "55555", "66666",
+  "77777", "88888", "99999", "AAAAA", "CCCCC",
+  "DDDDD", "EEEEE", "FFFFF", "GGGGG", "HHHHH",
+  "JJJJJ", "KKKKK", "LLLLL", "MMMMM", "NNNNN",
+  "PPPPP", "QQQQQ", "RRRRR", "SSSSS", "TTTTT",
+  "UUUUU", "WWWWW", "XXXXX", "YYYYY", "ZZZZZ",
+  // Combinaciones obvias
+  "ABC23", "23ABC", "A2A2A", "2A2A2",
+  "AAAA2", "2AAAA", "9999A", "A9999",
+]);
+
+function isCodeBlacklisted(code) {
+  return BLACKLISTED_CODES.has(code.toUpperCase());
+}
+
+function hasSequentialPattern(code) {
+  // Detectar secuencias ascendentes o descendentes de 3+ caracteres
+  const chars = "23456789ACDEFGHJKLMNPQRSTUWXYZ";
+  for (let i = 0; i < code.length - 2; i++) {
+    const idx1 = chars.indexOf(code[i]);
+    const idx2 = chars.indexOf(code[i + 1]);
+    const idx3 = chars.indexOf(code[i + 2]);
+    
+    if (idx1 !== -1 && idx2 !== -1 && idx3 !== -1) {
+      // Secuencia ascendente
+      if (idx2 === idx1 + 1 && idx3 === idx2 + 1) return true;
+      // Secuencia descendente
+      if (idx2 === idx1 - 1 && idx3 === idx2 - 1) return true;
+    }
+  }
+  return false;
+}
+
+function hasRepetitivePattern(code) {
+  // Detectar 3+ caracteres iguales consecutivos
+  for (let i = 0; i < code.length - 2; i++) {
+    if (code[i] === code[i + 1] && code[i] === code[i + 2]) {
+      return true;
+    }
+  }
+  return false;
+}
+
+function isValidRoomCode(code) {
+  if (!code || code.length !== 5) return false;
+  
+  // Verificar lista negra
+  if (isCodeBlacklisted(code)) return false;
+  
+  // Debe tener al menos 1 número y 1 letra
+  const hasNumber = /[23456789]/.test(code);
+  const hasLetter = /[ACDEFGHJKLMNPQRSTUWXYZ]/.test(code);
+  if (!hasNumber || !hasLetter) return false;
+  
+  // No permitir patrones secuenciales obvios
+  if (hasSequentialPattern(code)) return false;
+  
+  // No permitir patrones repetitivos
+  if (hasRepetitivePattern(code)) return false;
+  
+  return true;
+}
+
 function generateRoomCode() {
-  return String(Math.floor(100000 + Math.random() * 900000));
+  // Caracteres alfanuméricos sin confusión: sin O, 0, I, 1, V, B
+  const chars = "23456789ACDEFGHJKLMNPQRSTUWXYZ";
+  const numbers = "23456789";
+  const letters = "ACDEFGHJKLMNPQRSTUWXYZ";
+  
+  let attempts = 0;
+  const maxAttempts = 100;
+  
+  while (attempts < maxAttempts) {
+    let code = "";
+    
+    // Asegurar al menos 1 número y 1 letra
+    // Posiciones aleatorias para número y letra
+    const numPos = Math.floor(Math.random() * 5);
+    const letterPos = Math.floor(Math.random() * 5);
+    
+    for (let i = 0; i < 5; i++) {
+      if (i === numPos) {
+        code += numbers.charAt(Math.floor(Math.random() * numbers.length));
+      } else if (i === letterPos) {
+        code += letters.charAt(Math.floor(Math.random() * letters.length));
+      } else {
+        code += chars.charAt(Math.floor(Math.random() * chars.length));
+      }
+    }
+    
+    // Validar que el código sea seguro
+    if (isValidRoomCode(code)) {
+      return code;
+    }
+    
+    attempts++;
+  }
+  
+  // Fallback: código simple pero válido
+  return letters.charAt(Math.floor(Math.random() * letters.length)) +
+         numbers.charAt(Math.floor(Math.random() * numbers.length)) +
+         chars.charAt(Math.floor(Math.random() * chars.length)) +
+         chars.charAt(Math.floor(Math.random() * chars.length)) +
+         chars.charAt(Math.floor(Math.random() * chars.length));
 }
 
 function sanitizeCode(input) {
-  return String(input).trim().replace(/[^0-9]/g, "").slice(0, 6);
+  // Permitir solo caracteres alfanuméricos válidos (sin O, 0, I, 1, V, B)
+  const validChars = "23456789ACDEFGHJKLMNPQRSTUWXYZ";
+  return String(input)
+    .trim()
+    .toUpperCase()
+    .split("")
+    .filter(c => validChars.includes(c))
+    .slice(0, 5)
+    .join("");
 }
 
 function haptic(pattern = [10]) {
@@ -119,10 +241,20 @@ function updateTimerColor(el, remaining, total) {
 let compactMode = false;
 function toggleCompact() {
   compactMode = !compactMode;
-  filesList.classList.toggle("compact", compactMode);
-  const btn = document.getElementById("compact-btn");
-  if (btn) btn.classList.toggle("active", compactMode);
+  applyCompact(compactMode);
 }
+function applyCompact(on) {
+  compactMode = on;
+  filesList.classList.toggle("compact", on);
+  const btn = document.getElementById("compact-btn");
+  if (btn) btn.classList.toggle("active", on);
+}
+const mobileMq = window.matchMedia("(max-width: 600px)");
+function handleMobileCompact(e) {
+  if (e.matches) applyCompact(true);
+}
+mobileMq.addEventListener("change", handleMobileCompact);
+if (mobileMq.matches) applyCompact(true);
 
 const ENCRYPTED_TEXT_PREFIX = "enc-v1:";
 
@@ -335,6 +467,7 @@ function makeRipple(selector) {
 function initDigitInput() {
   const boxes = Array.from(document.querySelectorAll(".digit-box"));
   const hiddenInput = document.getElementById("room-input");
+  const validChars = "23456789ACDEFGHJKLMNPQRSTUWXYZ";
 
   function syncHidden() {
     hiddenInput.value = boxes.map(b => b.value).join("");
@@ -356,7 +489,7 @@ function initDigitInput() {
         }
       } else if (e.key === "ArrowLeft" && i > 0) {
         boxes[i - 1].focus();
-      } else if (e.key === "ArrowRight" && i < 5) {
+      } else if (e.key === "ArrowRight" && i < 4) {
         boxes[i + 1].focus();
       } else if (e.key === "Enter") {
         joinBtn.click();
@@ -364,8 +497,12 @@ function initDigitInput() {
     });
 
     box.addEventListener("input", (e) => {
-      // Filtrar solo dígitos
-      const val = e.target.value.replace(/[^0-9]/g, "").slice(-1);
+      const raw = e.target.value.toUpperCase();
+      const lastChar = raw.slice(-1);
+      if (lastChar && !validChars.includes(lastChar)) {
+        showToast(t('toastInvalidChar', { char: lastChar }), "warn", 1500, true); // true = posición alta
+      }
+      const val = raw.split("").filter(c => validChars.includes(c)).slice(-1).join("");
       box.value = val;
       if (val) {
         box.classList.add("digit-filled");
@@ -374,7 +511,7 @@ function initDigitInput() {
         void box.offsetWidth;
         box.classList.add("digit-pop");
         // Avanzar al siguiente
-        if (i < 5) boxes[i + 1].focus();
+        if (i < 4) boxes[i + 1].focus();
       } else {
         box.classList.remove("digit-filled");
       }
@@ -384,8 +521,8 @@ function initDigitInput() {
     // Pegar código completo
     box.addEventListener("paste", (e) => {
       e.preventDefault();
-      const pasted = (e.clipboardData.getData("text") || "").replace(/[^0-9]/g, "").slice(0, 6);
-      pasted.split("").forEach((ch, idx) => {
+      const pasted = (e.clipboardData.getData("text") || "").toUpperCase().split("").filter(c => validChars.includes(c)).slice(0, 5);
+      pasted.forEach((ch, idx) => {
         if (boxes[idx]) {
           boxes[idx].value = ch;
           boxes[idx].classList.add("digit-filled");
@@ -393,7 +530,7 @@ function initDigitInput() {
       });
       syncHidden();
       const nextEmpty = boxes.find(b => !b.value);
-      (nextEmpty || boxes[5]).focus();
+      (nextEmpty || boxes[4]).focus();
     });
 
     // Seleccionar todo al hacer focus
@@ -407,7 +544,8 @@ function runSlotMachine(callback) {
   const btn = document.getElementById("new-room-btn");
   const boxes = Array.from(document.querySelectorAll(".digit-box"));
   const finalCode = generateRoomCode();
-  const digits = finalCode.split("").map(Number);
+  const chars = finalCode.split("");
+  const validChars = "23456789ACDEFGHJKLMNPQRSTUWXYZ";
 
   btn.disabled = true;
 
@@ -416,15 +554,15 @@ function runSlotMachine(callback) {
   const FPS            = 60;
   const FRAME_MS       = 1000 / FPS;
 
-  // Para cada dígito: animar el valor que se muestra girando
-  digits.forEach((finalDigit, col) => {
+  // Para cada carácter: animar el valor que se muestra girando
+  chars.forEach((finalChar, col) => {
     const box = boxes[col];
     if (!box) return;
 
-    // Tiempo en que este dígito se detiene
-    const stopAt = TOTAL_DURATION - (digits.length - 1 - col) * STAGGER;
+    // Tiempo en que este carácter se detiene
+    const stopAt = TOTAL_DURATION - (chars.length - 1 - col) * STAGGER;
 
-    let current = Math.floor(Math.random() * 10); // valor inicial aleatorio
+    let currentIdx = Math.floor(Math.random() * validChars.length); // índice inicial aleatorio
     let startTime = null;
     let stopped = false;
 
@@ -435,9 +573,9 @@ function runSlotMachine(callback) {
       const elapsed = ts - startTime;
 
       if (elapsed >= stopAt && !stopped) {
-        // Parar en el dígito correcto
+        // Parar en el carácter correcto
         stopped = true;
-        box.value = String(finalDigit);
+        box.value = finalChar;
         box.classList.remove("digit-spinning");
         // Pop de aterrizaje
         box.classList.remove("digit-pop");
@@ -454,8 +592,8 @@ function runSlotMachine(callback) {
         const interval = FRAME_MS + progress * progress * 180;
 
         if (!box._lastChange || ts - box._lastChange >= interval) {
-          current = (current + 1) % 10;
-          box.value = String(current);
+          currentIdx = (currentIdx + 1) % validChars.length;
+          box.value = validChars[currentIdx];
           box._lastChange = ts;
         }
 
@@ -700,16 +838,17 @@ const dlProgressText = document.getElementById("dl-progress-text");
 const dlProgressTrack = document.getElementById("dl-progress-track");
 const dlProgressBar = document.getElementById("dl-progress-bar");
 
-function showToast(msg, type = "info", duration = 3000) {
+function showToast(msg, type = "info", duration = 3000, high = false) {
   toastEl.textContent = msg;
   toastEl.className   = `toast toast-${type}`;
+  if (high) toastEl.classList.add("toast-high");
   toastEl.classList.remove("hidden");
   clearTimeout(toastTimer);
   toastTimer = setTimeout(() => toastEl.classList.add("hidden"), duration);
 }
 
 function showDlProgress(pct, loaded, total) {
-  dlProgressText.textContent = `Descargando: ${formatBytes(loaded)} / ${formatBytes(total)}`;
+  dlProgressText.textContent = t('dlProgress', { loaded: formatBytes(loaded), total: formatBytes(total) });
   dlProgress.classList.remove("hidden");
   void dlProgress.offsetWidth;
   const trackWidth = dlProgressTrack.getBoundingClientRect().width;
@@ -723,6 +862,10 @@ function hideDlProgress() {
   dlProgress.classList.add("hidden");
   dlProgressBar.style.width = "0px";
 }
+
+// Compatibility aliases for cached code (temporary - can remove in v4.0)
+window.hideToastProgress = hideDlProgress;
+window.showToastProgress = showDlProgress;
 
 // Helper para mensajes traducidos
 function t(key, params = {}) {
@@ -848,7 +991,16 @@ async function calibrateServerTime() {
 
 async function joinRoom(code) {
   const clean = sanitizeCode(code);
-  if (clean.length < 6) { setStatus("Código de 6 dígitos", "error"); return; }
+  if (clean.length < 5) { 
+    setStatus("Código de 5 caracteres", "error"); 
+    return; 
+  }
+  
+  // Validar que el código sea seguro
+  if (!isValidRoomCode(clean)) {
+    setStatus("Código no válido. Debe tener al menos 1 número y 1 letra, sin patrones obvios.", "error");
+    return;
+  }
 
   // Cerrar onboarding si está visible
   closeOnboarding();
@@ -1069,16 +1221,21 @@ function attachDropEvents(container) {
         btn.classList.remove("dl-success");
         btn.disabled = false;
       }, 1500);
-      downloadAndDestroy(
+      addToDownloadQueue(
         btn.dataset.path,
         btn.dataset.id,
         btn.dataset.name,
         btn.dataset.type,
         btn.dataset.burn === "true",
         btn.dataset.storage || "supabase",
-        btn.dataset.b2key || null,
+        btn.dataset.b2Key || null,
         parseInt(btn.dataset.size) || 0
-      );
+      ).catch(err => {
+        showToast(`Error: ${err.message}`, "error");
+        btn.innerHTML = origHTML;
+        btn.classList.remove("dl-success");
+        btn.disabled = false;
+      });
     });
   });
   container.querySelectorAll(".preview-btn").forEach(btn => {
@@ -1318,47 +1475,19 @@ function uploadWithProgress(url, file, headers) {
 
 async function selectStorage(fileSize) {
   const SUPABASE_MAX = 50 * 1024 * 1024; // 50 MB
-  const B2_MAX = 500 * 1024 * 1024; // 500 MB
+  const B2_MAX = 250 * 1024 * 1024; // 250 MB
   
-  if (fileSize <= SUPABASE_MAX) {
-    return "supabase";
+  if (fileSize > B2_MAX) {
+    throw new Error(`Archivo muy grande. Máximo: ${formatBytes(B2_MAX)}`);
   }
   
-  // Para archivos grandes, verificar si B2 está disponible
-  if (fileSize <= B2_MAX) {
-    console.log('📁 Archivo grande detectado, verificando B2...');
-    
-    try {
-      // Verificar si B2 está configurado y funcionando
-      const response = await fetch('/health');
-      if (response.ok) {
-        const data = await response.json();
-        
-        // Verificar que B2 esté completamente configurado
-        if (data.status === 'ok' && 
-            data.keyId === 'CONFIGURED' && 
-            data.appKey === 'CONFIGURED' && 
-            data.s3ClientReady === true) {
-          console.log('✅ B2 configurado correctamente, usando B2');
-          return "b2";
-        }
-      }
-    } catch (error) {
-      console.warn('⚠️ Error verificando B2:', error);
-    }
-    
-    // Si B2 no está disponible, mostrar mensaje informativo
-    throw new Error(`Archivo grande detectado (${formatBytes(fileSize)}). 
-
-🔧 Para subir archivos >50MB, configura Backblaze B2:
-1. Ve a Vercel Dashboard → Settings → Environment Variables
-2. Verifica que todas las variables B2_* estén configuradas
-3. Redesplega la aplicación
-
-Mientras tanto, puedes subir archivos hasta 50MB.`);
+  if (fileSize > SUPABASE_MAX) {
+    const available = await testB2Connection();
+    if (!available) throw new Error(t('toastB2Disabled'));
+    return "b2";
   }
   
-  throw new Error(`Archivo demasiado grande. Máximo: 500MB (${formatBytes(fileSize)} recibido)`);
+  return "supabase";
 }
 
 // ─── Upload ────────────────────────────────────────────────
@@ -1376,9 +1505,9 @@ async function uploadFiles(files) {
     }
 
     // Validar tamaño ANTES de cifrar
-    const MAX_SIZE = 500 * 1024 * 1024; // 500MB
+    const MAX_SIZE = 250 * 1024 * 1024; // 250MB
     if (file.size > MAX_SIZE) {
-      showToast(`❌ ${file.name} es demasiado grande. Máximo: 500MB (actual: ${formatBytes(file.size)})`, "error");
+      showToast(t('toastFileTooLarge', { file: file.name, size: formatBytes(file.size) }), "error");
       continue;
     }
 
@@ -1465,21 +1594,21 @@ async function uploadFiles(files) {
         progressBar.style.width = "90%";
         const label = document.getElementById("progress-label");
         if (label) {
-          label.textContent = "Guardando en base de datos...";
+          label.textContent = t('progressSaving');
         }
       } catch (e) {
         // Mensajes de error amigables
-        let errorMsg = "Error subiendo archivo";
+        let errorMsg = t('errorUpload');
         if (e.message.includes("413") || e.message.includes("too large") || e.message.includes("PayloadTooLargeError")) {
-          errorMsg = "Archivo demasiado grande para subir";
+          errorMsg = t('errorTooLarge');
         } else if (e.message.includes("network") || e.message.includes("Failed to fetch") || e.message.includes("NetworkError")) {
-          errorMsg = "Error de conexión. Verifica tu internet";
+          errorMsg = t('errorConnection');
         } else if (e.message.includes("timeout") || e.message.includes("TimeoutError")) {
-          errorMsg = "La subida tardó demasiado. Intenta con un archivo más pequeño";
+          errorMsg = t('errorTimeout');
         } else if (e.message.includes("CORS") || e.message.includes("cors")) {
-          errorMsg = "Error de configuración. Contacta al administrador";
+          errorMsg = t('errorCors');
         } else if (e.message.includes("401") || e.message.includes("403")) {
-          errorMsg = "Error de autenticación con el servidor de archivos";
+          errorMsg = t('errorAuth');
         } else if (e.message.includes("500") || e.message.includes("502") || e.message.includes("503")) {
           errorMsg = "Servidor temporalmente no disponible. Intenta más tarde";
         }
@@ -1556,7 +1685,12 @@ async function uploadFiles(files) {
     clearUploadPreview();
   }
 
-  if (uploaded) showToast(`${uploaded} archivo(s) compartido(s) ✓`, "success");
+  if (uploaded) {
+    // dropzone.classList.add("dropzone-collapsed"); // Desactivado: mantener tamaño fijo del dropzone
+    showToast(t('toastUploaded', { n: uploaded }), "success");
+    const listSection = document.getElementById("list-section");
+    if (listSection) listSection.scrollIntoView({ behavior: "smooth", block: "start" });
+  }
 }
 
 function setProgressLabel(loaded, total, speed = null, remaining = null) {
@@ -1599,7 +1733,56 @@ async function sendText() {
   // Registrar TTL exacto para el timer local
   if (insertData?.id) myRecentDrops.set(insertData.id, TTL_SECONDS);
   textInput.value = "";
-  showToast("Texto compartido ✓", "success");
+  showToast(t('toastTextShared'), "success");
+}
+
+// ─── Download Queue System ────────────────────────────────
+let downloadQueue = [];
+let isDownloading = false;
+
+async function addToDownloadQueue(storagePath, dropId, fileName, contentType, burnAfterReading, storage, b2Key, fileSize) {
+  return new Promise((resolve, reject) => {
+    downloadQueue.push({
+      storagePath, dropId, fileName, contentType, burnAfterReading, storage, b2Key, fileSize,
+      resolve, reject
+    });
+    
+    // Mostrar notificación si hay descargas en cola
+    if (downloadQueue.length > 1) {
+      showToast(t('toastDownloadQueued', { n: downloadQueue.length - 1 }), "info", 2000);
+    }
+    
+    processDownloadQueue();
+  });
+}
+
+async function processDownloadQueue() {
+  if (isDownloading || downloadQueue.length === 0) return;
+  
+  isDownloading = true;
+  const download = downloadQueue.shift();
+  
+  try {
+    await downloadAndDestroy(
+      download.storagePath,
+      download.dropId,
+      download.fileName,
+      download.contentType,
+      download.burnAfterReading,
+      download.storage,
+      download.b2Key,
+      download.fileSize
+    );
+    download.resolve();
+  } catch (error) {
+    download.reject(error);
+  } finally {
+    isDownloading = false;
+    // Procesar siguiente descarga en la cola
+    if (downloadQueue.length > 0) {
+      setTimeout(processDownloadQueue, 500); // Pequeña pausa entre descargas
+    }
+  }
 }
 
 // ─── Download ──────────────────────────────────────────────
@@ -1607,7 +1790,7 @@ async function sendText() {
 async function downloadAndDestroy(storagePath, dropId, fileName, contentType = "application/octet-stream", burnAfterReading = false, storage = "supabase", b2Key = null, fileSize = 0) {
   const startTime = Date.now();
   
-  showToast("Descargando…", "info");
+  showToast(t('toastDownloadingSimple', { n: 1, total: '' }), "info");
 
   console.log(`📥 Descargando: storage=${storage}, fileSize=${fileSize}, path=${storagePath}`);
 
@@ -1619,12 +1802,9 @@ async function downloadAndDestroy(storagePath, dropId, fileName, contentType = "
     if (storage === "b2") {
       data = await downloadFromB2(b2Key || storagePath, (loaded, total, percent, speed) => {
         const t = total || fileSize;
-        if (t > 0) {
-          const pct = Math.min(100, (loaded / t) * 100);
-          showDlProgress(pct, loaded, t);
-        } else {
-          dlProgressText.textContent = `Descargando: ${formatBytes(loaded)}…`;
-        }
+        const actualPercent = t > 0 ? Math.round((loaded / t) * 100) : 0;
+        if (t > 0) showDlProgress(actualPercent, loaded, t);
+        else dlProgressText.textContent = t('dlProgressSimple', { loaded: formatBytes(loaded) });
       });
 
       hideDlProgress();
@@ -1654,7 +1834,7 @@ async function downloadAndDestroy(storagePath, dropId, fileName, contentType = "
           const pct = Math.min(100, (receivedLength / contentLength) * 100);
           showDlProgress(pct, receivedLength, contentLength);
         } else {
-          dlProgressText.textContent = `Descargando: ${formatBytes(receivedLength)}…`;
+          dlProgressText.textContent = t('dlProgressSimple', { loaded: formatBytes(receivedLength) });
         }
       }
 
@@ -1662,14 +1842,13 @@ async function downloadAndDestroy(storagePath, dropId, fileName, contentType = "
       data = new Blob(chunks, { type: "application/octet-stream" });
     }
 
-    // Descifrar
-    showToast("Descifrando…", "info");
+    showToast(t('toastDecrypting'), "info");
     
     let decryptedBlob;
     try {
       decryptedBlob = await decryptFile(data, roomId, contentType);
     } catch (err) {
-      showToast(`Error descifrando: ${err.message}`, "error");
+      showToast(t('toastErrorDecrypt', { error: err.message }), "error");
       return;
     }
 
@@ -1690,7 +1869,7 @@ async function downloadAndDestroy(storagePath, dropId, fileName, contentType = "
     recordDownload(fileName, roomId);
 
     if (burnAfterReading) {
-      showToast("Eliminando archivo (burn after reading)…", "info");
+      showToast(t('toastBurning'), "info");
       burnedDropIds.add(dropId);
       const { error: delErr } = await db.from("drops").delete().eq("id", dropId);
       
@@ -1715,15 +1894,15 @@ async function downloadAndDestroy(storagePath, dropId, fileName, contentType = "
       clearInterval(fileTimers[dropId]);
       delete fileTimers[dropId];
       animateExpire(dropId, "burn");
-      showToast("Descargado y eliminado ✓", "success");
+      showToast(t('toastDownloadedBurned'), "success");
     } else {
-      showToast(`Descarga completada: ${fileName} ✓`, "success");
+      showToast(t('toastDownloadComplete', { file: fileName }), "success");
     }
 
   } catch (e) {
     hideDlProgress();
     console.error('❌ Error en descarga:', e);
-    showToast(`Error descargando: ${e.message}`, "error");
+    showToast(t('toastErrorDownload', { error: e.message }), "error");
   }
 }
 
@@ -1871,13 +2050,12 @@ async function showQR() {
   qrCanvas.innerHTML = "";
 
   try {
-    const dark = window.matchMedia("(prefers-color-scheme: dark)").matches;
     new QRCode(qrCanvas, {
       text: url,
       width: 220,
       height: 220,
-      colorDark:  dark ? "#ffffff" : "#1c1c1e",
-      colorLight: dark ? "#1c1c1e" : "#ffffff",
+      colorDark:  "#ffffff",
+      colorLight: "#1c1c1e",
       correctLevel: QRCode.CorrectLevel.M,
     });
   } catch (err) {
@@ -1999,6 +2177,7 @@ window.addEventListener("dragenter", (e) => {
   e.preventDefault();
   if (roomId && e.dataTransfer.types.includes("Files")) {
     dragCounter++;
+    // dropzone.classList.remove("dropzone-collapsed"); // Ya no es necesario
     dropzone.classList.add("drag-over");
     dropzone.scrollIntoView({ behavior: "smooth", block: "center" });
   }
@@ -2039,14 +2218,14 @@ dropzone.addEventListener("drop", e => {
   if (roomId) showTTLPicker(e.dataTransfer.files);
   else showToast(t('toastJoinFirst'), "error");
 });
-dropzone.addEventListener("click", () => fileInput.click());
+dropzone.addEventListener("click", () => { fileInput.click(); });
 fileInput.addEventListener("change", () => {
   if (fileInput.files.length) showTTLPicker(fileInput.files);
 });
 
 joinBtn.addEventListener("click", () => {
   const code = sanitizeCode(roomInput.value);
-  if (code.length < 6) { setStatus("Código de 6 dígitos", "error"); return; }
+  if (code.length < 5) { setStatus("Código de 5 caracteres", "error"); return; }
   joinRoom(code);
 });
 roomInput.addEventListener("keydown", e => { if (e.key === "Enter") joinBtn.click(); });
@@ -2101,7 +2280,7 @@ document.getElementById("invite-btn")?.addEventListener("click", inviteToRoom);
 
 async function downloadAllAsZip() {
   if (!window.JSZip) {
-    showToast("JSZip no está cargado", "error");
+    showToast(t('errorJSZip'), "error");
     return;
   }
 
@@ -2115,31 +2294,45 @@ async function downloadAllAsZip() {
         name: btn.dataset.name,
         type: btn.dataset.type || "application/octet-stream",
         id: btn.dataset.id,
-        burn: btn.dataset.burn === "true"
+        burn: btn.dataset.burn === "true",
+        storage: btn.dataset.storage || "supabase",
+        b2Key: btn.dataset.b2Key || null
       };
     })
     .filter(Boolean);
 
   if (files.length === 0) {
-    showToast("No hay archivos para descargar", "info");
+    showToast(t('toastNoFilesToDownload'), "info");
     return;
   }
 
-  showToast(`Descargando ${files.length} archivo(s)…`, "info");
+  showToast(t('toastDownloading', { n: files.length, total: '' }), "info");
   const zip = new JSZip();
   let downloaded = 0;
   const filesToBurn = []; // Archivos con burn after reading
 
   for (const file of files) {
     try {
-      // Descargar archivo cifrado
-      const { data, error } = await db.storage
-        .from("ghost-drop")
-        .download(file.path);
+      let data;
 
-      if (error || !data) {
-        console.error(`Error descargando ${file.name}:`, error);
-        continue;
+      if (file.storage === "b2") {
+        // Descargar desde B2/R2
+        if (!file.b2Key) {
+          console.error(`Error downloading ${file.name}: missing b2Key`);
+          continue;
+        }
+        data = await downloadFromB2(file.b2Key);
+      } else {
+        // Descargar desde Supabase
+        const { data: sbData, error } = await db.storage
+          .from("ghost-drop")
+          .download(file.path);
+
+        if (error || !sbData) {
+          console.error(`Error downloading ${file.name}:`, error);
+          continue;
+        }
+        data = sbData;
       }
 
       // Descifrar
@@ -2154,19 +2347,19 @@ async function downloadAllAsZip() {
         filesToBurn.push(file);
       }
       
-      showToast(`Descargando ${downloaded}/${files.length}…`, "info");
+      showToast(t('toastDownloading', { n: downloaded, total: files.length }), "info");
     } catch (err) {
       console.error(`Error procesando ${file.name}:`, err);
     }
   }
 
   if (downloaded === 0) {
-    showToast("No se pudo descargar ningún archivo", "error");
+    showToast(t('toastNoFiles'), "error");
     return;
   }
 
   // Generar ZIP
-  showToast("Generando ZIP…", "info");
+  showToast(t('toastGeneratingZip'), "info");
   const zipBlob = await zip.generateAsync({ type: "blob" });
 
   // Descargar
@@ -2195,9 +2388,13 @@ async function downloadAllAsZip() {
         }
         
         // Borrar del storage
-        const { error: storageErr } = await db.storage.from("ghost-drop").remove([file.path]);
-        if (storageErr) {
-          console.error("burn delete storage:", storageErr);
+        if (file.storage === "b2" && file.b2Key) {
+          await deleteFromB2(file.b2Key);
+        } else {
+          const { error: storageErr } = await db.storage.from("ghost-drop").remove([file.path]);
+          if (storageErr) {
+            console.error("burn delete storage:", storageErr);
+          }
         }
         
         // Notificar a otros usuarios
@@ -2219,7 +2416,7 @@ async function downloadAllAsZip() {
 
   haptic([10, 50, 10]);
   const burnMsg = filesToBurn.length > 0 ? ` (${filesToBurn.length} borrado(s))` : "";
-  showToast(`${downloaded} archivo(s) descargados${burnMsg} ✓`, "success");
+  showToast(t('toastDownloaded', { n: downloaded, burn: burnMsg }), "success");
 }
 
 // ─── Onboarding (primera visita) ──────────────────────────
@@ -2302,7 +2499,7 @@ async function init() {
   const salaParam = params.get("sala") || params.get("room");
   
   // Mostrar onboarding INMEDIATAMENTE si no hay auto-join
-  if (!salaParam || sanitizeCode(salaParam).length !== 6) {
+  if (!salaParam || sanitizeCode(salaParam).length !== 5) {
     initOnboarding();
   }
 
@@ -2310,7 +2507,7 @@ async function init() {
   await calibrateServerTime().catch(() => {});
 
   // Procesar auto-join después de la calibración
-  if (salaParam && sanitizeCode(salaParam).length === 6) {
+  if (salaParam && sanitizeCode(salaParam).length === 5) {
     joinRoom(sanitizeCode(salaParam));
   }
 
@@ -2338,13 +2535,5 @@ init();
 
 notifyBtn.addEventListener("click", requestNotifications);
 
-// Esperar a que i18n esté listo
-window.addEventListener('load', () => {
-  const langBtn = document.getElementById("lang-btn");
-  if (langBtn && window.i18n) {
-    langBtn.addEventListener("click", () => {
-      window.i18n.toggleLanguage();
-      haptic([8]);
-    });
-  }
-});
+// Haptic feedback for language switch - delegated through i18n.js
+window.i18n.__haptic = () => haptic?.([8]);

@@ -13,7 +13,7 @@ const CRYPTO_CONFIG = {
 
 /**
  * Deriva una clave AES-256 desde el código de sala
- * @param {string} roomCode - Código de 6 dígitos de la sala
+ * @param {string} roomCode - Código de 5 caracteres de la sala
  * @returns {Promise<CryptoKey>}
  */
 async function deriveKey(roomCode) {
@@ -87,13 +87,21 @@ async function encryptFile(file, roomCode) {
  */
 async function decryptFile(encryptedBlob, roomCode, originalType) {
   try {
+    console.log(`🔓 Descifrando archivo: size=${encryptedBlob.size}, roomCode=${roomCode}, type=${originalType}`);
+    
     const key = await deriveKey(roomCode);
+    console.log(`🔑 Clave derivada exitosamente`);
+    
     const data = await encryptedBlob.arrayBuffer();
+    console.log(`📦 ArrayBuffer obtenido: ${data.byteLength} bytes`);
+    
     const dataView = new Uint8Array(data);
     
     // Extraer IV y datos cifrados
     const iv = dataView.slice(0, CRYPTO_CONFIG.ivLength);
     const encrypted = dataView.slice(CRYPTO_CONFIG.ivLength);
+    
+    console.log(`🔢 IV extraído: ${iv.length} bytes, Datos cifrados: ${encrypted.length} bytes`);
     
     // Descifrar
     const decrypted = await crypto.subtle.decrypt(
@@ -102,9 +110,14 @@ async function decryptFile(encryptedBlob, roomCode, originalType) {
       encrypted
     );
     
+    console.log(`✅ Descifrado exitoso: ${decrypted.byteLength} bytes`);
+    
     return new Blob([decrypted], { type: originalType });
   } catch (err) {
-    console.error("Error descifrando archivo:", err);
+    console.error("❌ Error descifrando archivo:", err);
+    console.error("Stack:", err.stack);
+    console.error("Blob size:", encryptedBlob.size);
+    console.error("Room code:", roomCode);
     throw new Error("No se pudo descifrar el archivo. ¿Código de sala correcto?");
   }
 }

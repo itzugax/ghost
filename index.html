@@ -3,1122 +3,185 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Ghost Drop v3.6 — Share files in 5 seconds</title>
+  <title>Ghost Drop — Share files in 5 seconds</title>
   <meta name="description" content="The fastest way to share files. No signup, no apps, E2E encrypted. Now with improved UX and seamless language switching." />
-  
+
   <!-- SEO -->
-  <meta name="keywords" content="file sharing, ephemeral, encrypted, no signup, airdrop web, anonymous file transfer, ghost drop v3.6, improved UX" />
-  
+  <meta name="keywords" content="file sharing, ephemeral, encrypted, no signup, airdrop web, anonymous file transfer" />
+
   <!-- Open Graph -->
   <meta property="og:type" content="website" />
   <meta property="og:url" content="https://gdrop.vercel.app" />
-  <meta property="og:title" content="Ghost Drop v3.6 — Share files in 5 seconds" />
+  <meta property="og:title" content="Ghost Drop — Share files in 5 seconds" />
   <meta property="og:description" content="No signup. No apps. E2E encryption. Now with improved UX and seamless language switching." />
   <meta property="og:image" content="https://gdrop.vercel.app/og-image.svg" />
-  
+
   <!-- Twitter -->
   <meta property="twitter:card" content="summary_large_image" />
   <meta property="twitter:url" content="https://gdrop.vercel.app" />
-  <meta property="twitter:title" content="Ghost Drop v3.6 — Share files in 5 seconds" />
+  <meta property="twitter:title" content="Ghost Drop — Share files in 5 seconds" />
   <meta property="twitter:description" content="No signup. No apps. E2E encryption. Now with improved UX and seamless language switching." />
   <meta property="twitter:image" content="https://gdrop.vercel.app/og-image.svg" />
-  
+
   <!-- Theme -->
-  <meta name="theme-color" content="#000000" />
-  
+  <meta name="theme-color" content="#0B0F19" />
+
   <link rel="stylesheet" href="style.css" />
   <link rel="icon" href="icon.png" type="image/png" />
   <link rel="apple-touch-icon" href="icon.png" />
   <link rel="manifest" href="manifest.json" />
-  
+
   <!-- Umami Analytics -->
   <script defer src="https://cloud.umami.is/script.js" data-website-id="b303304f-494c-4689-be84-4ad643db31c6"></script>
-  
-  <style>
-    * {
-      margin: 0;
-      padding: 0;
-      box-sizing: border-box;
-    }
-    
-    body {
-      min-height: 100vh;
-      display: flex;
-      flex-direction: column;
-    }
-    
-    .hero-bg {
-      position: fixed;
-      inset: 0;
-      z-index: 0;
-      pointer-events: none;
-      overflow: hidden;
-    }
-    
-    .hero-bg::before {
-      content: '';
-      position: absolute;
-      inset: 0;
-      background:
-        radial-gradient(ellipse 70% 45% at 50% 35%, rgba(37, 99, 235, 0.35), transparent 60%),
-        radial-gradient(ellipse 60% 40% at 25% 75%, rgba(99, 102, 241, 0.2), transparent 50%),
-        radial-gradient(ellipse 55% 40% at 75% 80%, rgba(59, 130, 246, 0.15), transparent 50%);
-    }
-    
-    .hero-orb {
-      position: absolute;
-      border-radius: 50%;
-      filter: blur(100px);
-      will-change: transform;
-    }
-    
-    .hero-orb-1 {
-      width: 600px;
-      height: 600px;
-      background: radial-gradient(circle, rgba(59, 130, 246, 0.2), transparent 70%);
-      top: -200px;
-      left: 50%;
-      transform: translateX(-50%);
-      animation: orb-float-1 12s ease-in-out infinite alternate;
-    }
-    
-    .hero-orb-2 {
-      width: 450px;
-      height: 450px;
-      background: radial-gradient(circle, rgba(99, 102, 241, 0.15), transparent 70%);
-      bottom: 5%;
-      left: 0;
-      animation: orb-float-2 15s ease-in-out infinite alternate;
-    }
-    
-    .hero-orb-3 {
-      width: 500px;
-      height: 500px;
-      background: radial-gradient(circle, rgba(59, 130, 246, 0.12), transparent 70%);
-      bottom: 0;
-      right: -100px;
-      animation: orb-float-3 10s ease-in-out infinite alternate;
-    }
-    
-    .hero-bg::after {
-      content: '';
-      position: absolute;
-      inset: 0;
-      background-image:
-        linear-gradient(rgba(59, 130, 246, 0.08) 1px, transparent 1px),
-        linear-gradient(90deg, rgba(59, 130, 246, 0.08) 1px, transparent 1px);
-      background-size: 80px 80px;
-      mask-image: radial-gradient(ellipse 90% 80% at 50% 50%, black 20%, transparent 70%);
-      -webkit-mask-image: radial-gradient(ellipse 90% 80% at 50% 50%, black 20%, transparent 70%);
-    }
-    
-    .hero-mist {
-      position: absolute;
-      inset: 0;
-      background: white;
-      mask-image: radial-gradient(ellipse 80% 70% at 50% 50%, black 10%, transparent 70%);
-      -webkit-mask-image: radial-gradient(ellipse 80% 70% at 50% 50%, black 10%, transparent 70%);
-      opacity: 0.03;
-      pointer-events: none;
-    }
-
-    .hero-ring {
-      position: absolute;
-      border-radius: 50%;
-      border: 1px solid rgba(59, 130, 246, 0.07);
-      pointer-events: none;
-      will-change: transform;
-    }
-    .hero-ring-1 {
-      width: 75vmin; height: 75vmin;
-      top: 10%; left: 5%;
-      animation: ring-pulse 10s ease-in-out infinite;
-    }
-    .hero-ring-2 {
-      width: 55vmin; height: 55vmin;
-      bottom: 8%; right: 5%;
-      animation: ring-pulse 14s ease-in-out infinite reverse;
-    }
-    .hero-ring-3 {
-      width: 100vmin; height: 100vmin;
-      top: -20%; right: -20%;
-      animation: ring-pulse 18s ease-in-out infinite 4s;
-    }
-    @keyframes ring-pulse {
-      0%, 100% { transform: scale(1); opacity: 0.3; }
-      50% { transform: scale(1.1); opacity: 0.8; }
-    }
-    
-    @keyframes stat-pulse {
-      0%, 100% { opacity: 1; }
-      50% { opacity: 0.7; }
-    }
-    .stat:nth-child(1) .stat-value { animation: stat-pulse 4s ease-in-out infinite; }
-    .stat:nth-child(2) .stat-value { animation: stat-pulse 4s ease-in-out infinite -1.3s; }
-    .stat:nth-child(3) .stat-value { animation: stat-pulse 4s ease-in-out infinite -2.6s; }
-    
-    @keyframes icon-glow {
-      0%, 100% { filter: drop-shadow(0 0 4px rgba(59,130,246,0)); }
-      50% { filter: drop-shadow(0 0 10px rgba(59,130,246,0.25)); }
-    }
-    .feature:nth-child(1) .feature-icon { animation: icon-glow 3s ease-in-out infinite; }
-    .feature:nth-child(2) .feature-icon { animation: icon-glow 3.5s ease-in-out infinite -0.8s; }
-    .feature:nth-child(3) .feature-icon { animation: icon-glow 2.8s ease-in-out infinite -1.6s; }
-    .feature:nth-child(4) .feature-icon { animation: icon-glow 3.2s ease-in-out infinite -2.4s; }
-    
-    @keyframes cta-breathe {
-      0%, 100% { box-shadow: 0 4px 16px rgba(59, 130, 246, 0.25), 0 0 20px rgba(59, 130, 246, 0); }
-      50% { box-shadow: 0 8px 32px rgba(59, 130, 246, 0.35), 0 0 40px rgba(59, 130, 246, 0.08); }
-    }
-    .cta-button { animation: cta-breathe 3s ease-in-out infinite; }
-    
-    @keyframes step-glow {
-      0%, 100% { box-shadow: 0 0 0 0 rgba(59, 130, 246, 0); }
-      50% { box-shadow: 0 0 16px 2px rgba(59, 130, 246, 0.08); }
-    }
-    .step:nth-child(1) .step-number { animation: step-glow 4s ease-in-out infinite; }
-    .step:nth-child(2) .step-number { animation: step-glow 4s ease-in-out infinite -1.3s; }
-    .step:nth-child(3) .step-number { animation: step-glow 4s ease-in-out infinite -2.6s; }
-    
-    @keyframes dot-glow {
-      0%, 100% { box-shadow: 0 0 8px rgba(59, 130, 246, 0.3); transform: scale(1); }
-      50% { box-shadow: 0 0 16px rgba(59, 130, 246, 0.6); transform: scale(1.4); }
-    }
-    .section-divider-dot { animation: dot-glow 3s ease-in-out infinite; }
-    
-    @keyframes feature-bg-shift {
-      0%, 100% { background-position: 0% 50%; }
-      50% { background-position: 100% 50%; }
-    }
-    .feature {
-      background-size: 200% 200%;
-      animation: feature-bg-shift 8s ease-in-out infinite;
-    }
-    
-    .hero-ghost-fixed {
-      position: fixed;
-      top: 50%;
-      left: 50%;
-      width: 0;
-      height: 0;
-      pointer-events: none;
-      user-select: none;
-      z-index: 9999;
-    }
-    
-    .hero-ghost-fixed .hero-ghost {
-      line-height: 1;
-      display: block;
-      text-shadow: 0 0 80px rgba(59, 130, 246, 0.15), 0 0 160px rgba(59, 130, 246, 0.05);
-    }
-    
-    .hero-ghost-1 .hero-ghost { font-size: 8rem; opacity: 0.12; }
-    .hero-ghost-2 .hero-ghost { font-size: 4.5rem; opacity: 0.07; }
-    .hero-ghost-3 .hero-ghost { font-size: 3.5rem; opacity: 0.06; }
-    
-    .hero-ghost-1 { animation: ghost-fly-1 60s cubic-bezier(0.45, 0.05, 0.55, 0.95) infinite; }
-    .hero-ghost-2 { animation: ghost-fly-2 28s cubic-bezier(0.45, 0.05, 0.55, 0.95) infinite; }
-    .hero-ghost-3 { animation: ghost-fly-3 18s cubic-bezier(0.4, 0.1, 0.6, 0.9) infinite; }
-    
-    .hero-ghost-1 .hero-ghost-bob { animation: ghost-bob-1 5s ease-in-out infinite; }
-    .hero-ghost-2 .hero-ghost-bob { animation: ghost-bob-2 3s ease-in-out infinite; }
-    .hero-ghost-3 .hero-ghost-bob { animation: ghost-bob-3 2s ease-in-out infinite; }
-    
-    @keyframes ghost-fly-1 {
-      0%   { transform: translate(0, -35vh) rotate(0deg) scale(1); }
-      12%  { transform: translate(38vw, -22vh) rotate(18deg) scale(1.08); }
-      25%  { transform: translate(46vw, 0) rotate(-6deg) scale(1.14); }
-      37%  { transform: translate(36vw, 28vh) rotate(-22deg) scale(1.04); }
-      50%  { transform: translate(0, 36vh) rotate(-18deg) scale(0.92); }
-      62%  { transform: translate(-36vw, 28vh) rotate(4deg) scale(0.86); }
-      75%  { transform: translate(-46vw, 0) rotate(18deg) scale(0.9); }
-      87%  { transform: translate(-38vw, -22vh) rotate(12deg) scale(1.02); }
-      100% { transform: translate(0, -35vh) rotate(0deg) scale(1); }
-    }
-    
-    @keyframes ghost-fly-2 {
-      0%   { transform: translate(0, 0) rotate(0deg) scale(1); }
-      12%  { transform: translate(35vw, -28vh) rotate(22deg) scale(1.12); }
-      25%  { transform: translate(42vw, 0) rotate(-8deg) scale(1.06); }
-      37%  { transform: translate(28vw, 32vh) rotate(-26deg) scale(0.94); }
-      50%  { transform: translate(0, 36vh) rotate(-18deg) scale(0.86); }
-      62%  { transform: translate(-28vw, 32vh) rotate(6deg) scale(0.9); }
-      75%  { transform: translate(-42vw, 0) rotate(24deg) scale(1.02); }
-      87%  { transform: translate(-35vw, -28vh) rotate(12deg) scale(1.08); }
-      100% { transform: translate(0, 0) rotate(0deg) scale(1); }
-    }
-    
-    @keyframes ghost-fly-3 {
-      0%   { transform: translate(-44vw, -30vh) rotate(0deg) scale(1); }
-      20%  { transform: translate(12vw, 12vh) rotate(30deg) scale(1.14); }
-      40%  { transform: translate(44vw, -8vh) rotate(-16deg) scale(0.9); }
-      60%  { transform: translate(24vw, 36vh) rotate(-30deg) scale(0.84); }
-      80%  { transform: translate(-20vw, 32vh) rotate(20deg) scale(0.94); }
-      100% { transform: translate(-44vw, -30vh) rotate(0deg) scale(1); }
-    }
-    
-    @keyframes ghost-bob-1 {
-      0%, 100% { transform: translateY(-8px) rotate(-3deg); }
-      50% { transform: translateY(8px) rotate(3deg); }
-    }
-    @keyframes ghost-bob-2 {
-      0%, 100% { transform: translateY(-12px) rotate(-5deg); }
-      50% { transform: translateY(12px) rotate(5deg); }
-    }
-    @keyframes ghost-bob-3 {
-      0%, 100% { transform: translateY(-6px) rotate(-1deg); }
-      50% { transform: translateY(6px) rotate(1deg); }
-    }
-    
-    @keyframes particle-drift-1 {
-      0%, 100% { transform: translateY(0) translateX(0); }
-      50% { transform: translateY(-35px) translateX(20px); }
-    }
-    @keyframes particle-drift-2 {
-      0%, 100% { transform: translateY(0) translateX(0); }
-      50% { transform: translateY(25px) translateX(-30px); }
-    }
-    @keyframes particle-drift-3 {
-      0%, 100% { transform: translateY(0) translateX(0); }
-      33% { transform: translateY(-20px) translateX(15px); }
-      66% { transform: translateY(15px) translateX(-20px); }
-    }
-    @keyframes particle-twinkle {
-      0%, 100% { opacity: 0.15; transform: scale(0.8); }
-      50% { opacity: 0.6; transform: scale(1.3); }
-    }
-    
-    @keyframes glitch {
-      0%, 94%, 100% { transform: none; opacity: 1; text-shadow: none; }
-      95% { transform: translate(-1px, 0.5px) skewX(-0.5deg); text-shadow: 1.5px 0 rgba(59,130,246,0.5), -1px 0 rgba(255,255,255,0.2); }
-      96% { transform: translate(1px, -0.5px) skewX(0.5deg); text-shadow: -1.5px 0 rgba(59,130,246,0.4), 1px 0 rgba(255,255,255,0.15); }
-      97% { transform: translate(-0.5px, 0) skewX(-0.3deg); text-shadow: 1px 0 rgba(59,130,246,0.3), -0.5px 0 rgba(255,255,255,0.1); }
-      98% { transform: none; text-shadow: none; }
-    }
-    h1[data-i18n="heroTitle"] {
-      animation: glitch 15s ease-in-out infinite;
-    }
-    
-    .particle {
-      position: absolute;
-      border-radius: 50%;
-      background: rgba(59, 130, 246, 0.5);
-      box-shadow: 0 0 6px rgba(59, 130, 246, 0.3), 0 0 16px rgba(99, 102, 241, 0.15);
-      pointer-events: none;
-      will-change: transform;
-    }
-    .particle-1 { animation: particle-drift-1 18s ease-in-out infinite, particle-twinkle 4s ease-in-out infinite; }
-    .particle-2 { animation: particle-drift-2 22s ease-in-out infinite, particle-twinkle 5s ease-in-out infinite; }
-    .particle-3 { animation: particle-drift-3 26s ease-in-out infinite, particle-twinkle 6s ease-in-out infinite; }
-
-    .dust-particle {
-      position: fixed;
-      border-radius: 50%;
-      background: rgba(59, 130, 246, 0.15);
-      pointer-events: none;
-      will-change: transform;
-    }
-    .dust-particle-1 {
-      width: 2px; height: 2px;
-      top: 15%; left: 10%;
-      animation: dust-drift-1 30s ease-in-out infinite;
-    }
-    .dust-particle-2 {
-      width: 3px; height: 3px;
-      top: 70%; left: 85%;
-      animation: dust-drift-2 40s ease-in-out infinite;
-    }
-    .dust-particle-3 {
-      width: 1.5px; height: 1.5px;
-      top: 50%; left: 40%;
-      animation: dust-drift-3 35s ease-in-out infinite;
-    }
-    @keyframes dust-drift-1 {
-      0%, 100% { transform: translate(0, 0); opacity: 0.12; }
-      50% { transform: translate(35px, -30px); opacity: 0.06; }
-    }
-    @keyframes dust-drift-2 {
-      0%, 100% { transform: translate(0, 0); opacity: 0.12; }
-      50% { transform: translate(-40px, 25px); opacity: 0.06; }
-    }
-    @keyframes dust-drift-3 {
-      0%, 100% { transform: translate(0, 0); opacity: 0.12; }
-      50% { transform: translate(25px, 35px); opacity: 0.08; }
-    }
-
-    @keyframes orb-float-1 {
-      0%   { transform: translateX(-50%) translate(0, 0); }
-      100% { transform: translateX(-50%) translate(20px, -30px) scale(1.1); }
-    }
-    
-    @keyframes orb-float-2 {
-      0%   { transform: translate(0, 0); }
-      100% { transform: translate(30px, -20px) scale(1.15); }
-    }
-    
-    @keyframes orb-float-3 {
-      0%   { transform: translate(0, 0); }
-      100% { transform: translate(-20px, -15px) scale(1.1); }
-    }
-    
-    .section-divider {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      width: 160px;
-      margin: 3rem auto;
-    }
-    
-    .section-divider-line {
-      flex: 1;
-      height: 1px;
-      background: linear-gradient(90deg, transparent, rgba(255,255,255,0.12), transparent);
-    }
-    
-    .section-divider-dot {
-      width: 4px;
-      height: 4px;
-      border-radius: 50%;
-      background: rgba(59, 130, 246, 0.4);
-      box-shadow: 0 0 8px rgba(59, 130, 246, 0.3);
-    }
-    
-    header {
-      padding: 2rem 2rem 1rem;
-      text-align: center;
-      position: relative;
-      z-index: 1;
-    }
-    
-    .logo {
-      font-size: 1.75rem;
-      font-weight: 700;
-      display: inline-flex;
-      align-items: center;
-      gap: 0.5rem;
-    }
-    
-    .logo-accent {
-      color: #3b82f6;
-    }
-    
-    .lang-switcher {
-      position: fixed;
-      top: 1.25rem;
-      right: 1.25rem;
-      z-index: 100;
-    }
-    .lang-trigger {
-      display: flex;
-      align-items: center;
-      gap: 6px;
-      padding: 0.5rem 0.875rem;
-      background: rgba(255,255,255,0.06);
-      -webkit-backdrop-filter: blur(16px);
-      backdrop-filter: blur(16px);
-      border: 2px solid rgba(59,130,246,0.25);
-      border-radius: 9999px;
-      color: var(--text);
-      font-size: 0.8125rem;
-      font-weight: 600;
-      cursor: pointer;
-      transition: all 0.25s ease;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.12), 0 0 14px rgba(59,130,246,0.15);
-      line-height: 1;
-    }
-    .lang-trigger:hover {
-      background: rgba(255,255,255,0.12);
-      border-color: rgba(59,130,246,0.5);
-      box-shadow: 0 4px 20px rgba(59,130,246,0.35), 0 0 28px rgba(59,130,246,0.2);
-    }
-    .lang-flags {
-      display: inline-flex;
-      align-items: center;
-      gap: 2px;
-      flex-shrink: 0;
-      line-height: 1;
-    }
-    .lang-chevron {
-      width: 10px;
-      height: 10px;
-      opacity: 0.5;
-      flex-shrink: 0;
-      transition: transform 0.2s ease;
-    }
-    .lang-switcher.open .lang-chevron {
-      transform: rotate(180deg);
-    }
-    .lang-dropdown {
-      position: absolute;
-      top: calc(100% + 6px);
-      right: 0;
-      min-width: 150px;
-      background: rgba(18, 22, 36, 0.92);
-      -webkit-backdrop-filter: blur(24px);
-      backdrop-filter: blur(24px);
-      border: 1px solid rgba(255,255,255,0.08);
-      border-radius: 14px;
-      padding: 4px;
-      opacity: 0;
-      transform: translateY(-6px) scale(0.96);
-      pointer-events: none;
-      transition: all 0.2s ease;
-      box-shadow: 0 12px 40px rgba(0,0,0,0.4), 0 0 0 1px rgba(255,255,255,0.03);
-    }
-    .lang-dropdown::before {
-      content: '';
-      position: absolute;
-      top: -6px;
-      left: 0;
-      right: 0;
-      height: 6px;
-      background: transparent;
-    }
-    .lang-switcher:hover .lang-dropdown,
-    .lang-switcher.open .lang-dropdown {
-      opacity: 1;
-      transform: translateY(0) scale(1);
-      pointer-events: auto;
-    }
-    .lang-option {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      width: 100%;
-      padding: 0.5rem 0.75rem;
-      background: none;
-      border: none;
-      border-radius: 10px;
-      color: rgba(255,255,255,0.6);
-      font-size: 0.8125rem;
-      cursor: pointer;
-      transition: all 0.15s ease;
-      text-align: left;
-    }
-    .lang-option:hover {
-      background: rgba(59,130,246,0.15);
-      color: #fff;
-    }
-    .lang-option.active {
-      color: #60a5fa;
-      font-weight: 600;
-    }
-    .lang-option svg {
-      flex-shrink: 0;
-      border-radius: 2px;
-    }
-    
-    main {
-      flex: 1;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      padding: 2rem 1.5rem 3rem;
-      text-align: center;
-      position: relative;
-      z-index: 1;
-    }
-    
-    .hero-content {
-      max-width: 800px;
-      position: relative;
-      z-index: 1;
-    }
-    
-    h1 {
-      font-size: clamp(2.5rem, 7vw, 4.5rem);
-      font-weight: 700;
-      letter-spacing: -0.05em;
-      margin-bottom: 1.5rem;
-      line-height: 1.1;
-      background: linear-gradient(180deg, #ffffff 0%, rgba(255,255,255,0.5) 100%);
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-      background-clip: text;
-      filter: drop-shadow(0 0 30px rgba(59, 130, 246, 0.12));
-    }
-    
-    .subtitle {
-      font-size: clamp(1.125rem, 2.5vw, 1.5rem);
-      color: var(--text-2);
-      margin-bottom: 2.5rem;
-      line-height: 1.5;
-    }
-    
-    .cta-button {
-      display: inline-block;
-      padding: 1.125rem 3rem;
-      font-size: 1.25rem;
-      font-weight: 600;
-      background: linear-gradient(135deg, #2563eb 0%, #3b82f6 50%, #60a5fa 100%);
-      color: white;
-      border-radius: 14px;
-      text-decoration: none;
-      transition: all 0.3s ease;
-      margin-bottom: 3rem;
-      box-shadow: 0 4px 16px rgba(59, 130, 246, 0.25);
-      position: relative;
-      overflow: hidden;
-    }
-    
-    .cta-button::before {
-      content: '';
-      position: absolute;
-      inset: 0;
-      border-radius: inherit;
-      background: linear-gradient(135deg, #3b82f6 0%, #60a5fa 100%);
-      opacity: 0;
-      transition: opacity 0.3s ease;
-    }
-    
-    .cta-button:hover {
-      transform: translateY(-3px) scale(1.02);
-      box-shadow: 0 8px 28px rgba(59, 130, 246, 0.35), 0 0 40px rgba(59, 130, 246, 0.1);
-      animation: none;
-    }
-    
-    .cta-button:hover::before {
-      opacity: 1;
-    }
-    
-    .cta-button:active {
-      transform: translateY(0) scale(0.98);
-    }
-    
-    .stats {
-      display: flex;
-      justify-content: center;
-      gap: 1.5rem;
-      margin-bottom: 4rem;
-      flex-wrap: wrap;
-    }
-    
-    .stat {
-      text-align: center;
-      padding: 1.25rem 2rem;
-      background: rgba(255, 255, 255, 0.06);
-      -webkit-backdrop-filter: blur(12px);
-      backdrop-filter: blur(12px);
-      border: 1px solid rgba(255, 255, 255, 0.1);
-      border-radius: var(--radius-md);
-      min-width: 130px;
-      position: relative;
-      overflow: hidden;
-    }
-    
-    .stat::before {
-      content: '';
-      position: absolute;
-      top: 0;
-      left: 20%;
-      right: 20%;
-      height: 1px;
-      background: linear-gradient(90deg, transparent, rgba(59, 130, 246, 0.3), transparent);
-    }
-    
-    .stat-value {
-      font-size: 2.5rem;
-      font-weight: 800;
-      color: var(--accent);
-      margin-bottom: 0.25rem;
-      letter-spacing: -0.03em;
-    }
-    
-    .stat-label {
-      font-size: 0.8125rem;
-      color: var(--text-3);
-      letter-spacing: 0.02em;
-      text-transform: uppercase;
-      font-weight: 500;
-    }
-    
-    .features {
-      display: grid;
-      grid-template-columns: repeat(4, 1fr);
-      gap: 1.5rem;
-      max-width: 1000px;
-      width: 100%;
-      margin-top: 1rem;
-    }
-    
-    .feature {
-      text-align: center;
-      padding: 2rem 1.5rem;
-      background: linear-gradient(160deg, rgba(255,255,255,0.08) 0%, rgba(255,255,255,0.02) 100%);
-      -webkit-backdrop-filter: blur(24px);
-      backdrop-filter: blur(24px);
-      border: 1px solid rgba(255, 255, 255, 0.1);
-      border-radius: var(--radius-md);
-      position: relative;
-      overflow: hidden;
-      transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
-      box-shadow: inset 0 1px 0 rgba(255,255,255,0.08), 0 4px 24px rgba(0,0,0,0.25);
-    }
-    
-    .feature::before {
-      content: '';
-      position: absolute;
-      top: 0;
-      left: 10%;
-      right: 10%;
-      height: 1px;
-      background: linear-gradient(90deg, transparent, rgba(59, 130, 246, 0.5), transparent);
-    }
-    
-    .feature::after {
-      content: '';
-      position: absolute;
-      inset: 0;
-      border-radius: inherit;
-      padding: 1px;
-      background: linear-gradient(160deg, rgba(255,255,255,0.12), transparent 40%);
-      mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
-      -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
-      mask-composite: exclude;
-      -webkit-mask-composite: xor;
-      pointer-events: none;
-    }
-    
-    .feature:hover {
-      border-color: rgba(59, 130, 246, 0.5);
-      transform: translateY(-8px) scale(1.02);
-      box-shadow: inset 0 1px 0 rgba(255,255,255,0.1), 0 12px 48px rgba(59, 130, 246, 0.25), 0 0 60px rgba(59, 130, 246, 0.1);
-    }
-    
-    .feature-icon {
-      font-size: 3rem;
-      margin-bottom: 1.25rem;
-      display: block;
-      transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
-    }
-    
-    .feature:hover .feature-icon {
-      transform: scale(1.15) rotate(-3deg);
-    }
-    
-    .feature-title {
-      font-size: 1.125rem;
-      font-weight: 600;
-      margin-bottom: 0.5rem;
-      color: var(--text);
-      letter-spacing: -0.02em;
-    }
-    
-    .feature-desc {
-      font-size: 0.8125rem;
-      color: var(--text-3);
-      line-height: 1.7;
-    }
-    
-    .how-it-works {
-      margin-top: 5rem;
-      max-width: 800px;
-      width: 100%;
-    }
-    
-    .how-it-works h2 {
-      font-size: 2.5rem;
-      font-weight: 700;
-      text-align: center;
-      margin-bottom: 3rem;
-      letter-spacing: -0.05em;
-      background: linear-gradient(180deg, #ffffff 0%, rgba(255,255,255,0.5) 100%);
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-      background-clip: text;
-    }
-    
-    .steps {
-      display: flex;
-      flex-direction: column;
-      gap: 1.25rem;
-      position: relative;
-    }
-    
-    .steps::before {
-      content: '';
-      position: absolute;
-      left: 22px;
-      top: 44px;
-      bottom: 44px;
-      width: 1px;
-      background: linear-gradient(180deg, rgba(59,130,246,0.3), rgba(59,130,246,0.05), rgba(59,130,246,0.3));
-    }
-    
-    .step {
-      display: flex;
-      align-items: flex-start;
-      gap: 1.5rem;
-      padding: 1.75rem 2rem;
-      background: rgba(255, 255, 255, 0.035);
-      -webkit-backdrop-filter: blur(8px);
-      backdrop-filter: blur(8px);
-      border: 1px solid rgba(255, 255, 255, 0.08);
-      border-radius: var(--radius-md);
-      position: relative;
-      overflow: hidden;
-      transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
-    }
-    
-    .step::before {
-      content: attr(data-step-number);
-      position: absolute;
-      right: 0.5rem;
-      bottom: -0.5rem;
-      font-size: 7rem;
-      font-weight: 900;
-      color: rgba(59, 130, 246, 0.04);
-      line-height: 1;
-      pointer-events: none;
-      user-select: none;
-      font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Inter', sans-serif;
-    }
-    
-    .step::after {
-      content: '';
-      position: absolute;
-      left: 0;
-      top: 10%;
-      bottom: 10%;
-      width: 2px;
-      background: linear-gradient(180deg, transparent, rgba(59,130,246,0.2), transparent);
-      opacity: 0;
-      transition: opacity 0.4s ease;
-    }
-    
-    .step:hover {
-      border-color: rgba(59, 130, 246, 0.25);
-      transform: translateX(4px);
-      box-shadow: 0 4px 20px rgba(0,0,0,0.2);
-      background: rgba(255, 255, 255, 0.025);
-    }
-    
-    .step:hover::after {
-      opacity: 1;
-    }
-    
-    .step-number {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      width: 44px;
-      height: 44px;
-      background: rgba(59, 130, 246, 0.08);
-      color: #60a5fa;
-      border-radius: 50%;
-      font-size: 1rem;
-      font-weight: 600;
-      flex-shrink: 0;
-      border: 1px solid rgba(59, 130, 246, 0.15);
-      position: relative;
-      z-index: 1;
-    }
-    
-    .step-number::before {
-      content: '';
-      position: absolute;
-      inset: -3px;
-      border-radius: 50%;
-      background: radial-gradient(circle at center, rgba(59,130,246,0.15), transparent 70%);
-      z-index: -1;
-    }
-    
-    .step-content {
-      flex: 1;
-      position: relative;
-      z-index: 1;
-    }
-    
-    .step-title {
-      font-size: 1.25rem;
-      font-weight: 600;
-      margin-bottom: 0.375rem;
-      color: var(--text);
-      letter-spacing: -0.02em;
-    }
-    
-    .step-desc {
-      font-size: 0.9375rem;
-      color: var(--text-3);
-      line-height: 1.7;
-    }
-    
-    footer {
-      padding: 2.5rem 2rem;
-      text-align: center;
-      color: var(--text-3);
-      font-size: 0.875rem;
-      border-top: 1px solid var(--border);
-    }
-    
-    .footer-links {
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      gap: 2rem;
-      flex-wrap: wrap;
-      margin-bottom: 1rem;
-    }
-    
-    footer a {
-      color: var(--text-3);
-      text-decoration: none;
-      transition: color 0.2s;
-      display: inline-flex;
-      align-items: center;
-      gap: 0.5rem;
-    }
-    
-    footer a:hover {
-      color: var(--text);
-    }
-    
-    .footer-copyright {
-      margin-top: 1rem;
-      font-size: 0.8125rem;
-    }
-    
-    @media (max-width: 640px) {
-      header {
-        padding: 1.5rem 1.5rem 1rem;
-      }
-      
-      .logo {
-        font-size: 1.5rem;
-      }
-      
-      .stats {
-        gap: 1rem;
-      }
-      
-      .stat {
-        padding: 1rem 1.25rem;
-        min-width: 100px;
-      }
-      
-      .stat-value {
-        font-size: 2rem;
-      }
-      
-      .features {
-        grid-template-columns: repeat(2, 1fr);
-        gap: 1.5rem;
-      }
-      
-      .feature {
-        padding: 1rem 0.5rem;
-      }
-      
-      .feature-icon {
-        font-size: 2.5rem;
-      }
-      
-      .how-it-works h2 {
-        font-size: 2rem;
-      }
-      
-      .steps::before {
-        left: 18px;
-      }
-      
-      .step {
-        padding: 1.25rem 1.5rem;
-        gap: 1rem;
-      }
-      
-      .step-number {
-        width: 36px;
-        height: 36px;
-        font-size: 0.875rem;
-      }
-      
-      .step-title {
-        font-size: 1.125rem;
-      }
-      
-      .step-desc {
-        font-size: 0.9375rem;
-      }
-      
-      .footer-links {
-        gap: 1.5rem;
-      }
-    }
-    
-    @media (prefers-reduced-motion: reduce) {
-      .hero-orb, .hero-ghost-fixed, .particle, .hero-ring,
-      .stat-value, .feature-icon, .cta-button, .step-number,
-      .section-divider-dot, .feature, h1[data-i18n="heroTitle"],
-      .dust-particle {
-        animation: none !important;
-      }
-      .dust-particle { opacity: 0.1 !important; }
-      .cta-button { box-shadow: 0 4px 16px rgba(59, 130, 246, 0.25); }
-      .feature { background-size: auto; }
-      h1 { filter: drop-shadow(0 0 30px rgba(59, 130, 246, 0.12)); }
-      .lang-dropdown { transition: none !important; }
-    }
-  </style>
 </head>
-<body>
-  
-  <header>
-    <div class="logo">
-      <span>👻</span>
-      <span>Ghost<span class="logo-accent">Drop</span></span>
-    </div>
-    <div class="lang-switcher" id="lang-btn">
-      <button class="lang-trigger" title="Change language">
-        <span class="lang-flags"></span>
-        <span class="lang-code">EN</span>
-        <svg class="lang-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-          <polyline points="6 9 12 15 18 9"/>
-        </svg>
-      </button>
-      <div class="lang-dropdown">
-        <button class="lang-option" data-lang="es" type="button">
-          <svg viewBox="0 0 24 16" width="16" height="11"><rect width="24" height="16" fill="#c60b1e"/><rect y="4" width="24" height="8" fill="#ffc400"/></svg>
-          <span style="opacity:0.3;font-size:0.6rem;line-height:1">/</span>
-          <svg viewBox="0 0 24 16" width="16" height="11"><rect width="8" height="16" fill="#006847"/><rect x="8" width="8" height="16" fill="#fff"/><rect x="16" width="8" height="16" fill="#ce1126"/></svg>
-          Español
-        </button>
-        <button class="lang-option active" data-lang="en" type="button">
-          <svg viewBox="0 0 24 16" width="16" height="11"><rect width="24" height="16" fill="#b22234"/><rect y="2" width="24" height="2" fill="#fff"/><rect y="6" width="24" height="2" fill="#fff"/><rect y="10" width="24" height="2" fill="#fff"/><rect y="14" width="24" height="2" fill="#fff"/><rect width="9.5" height="8" fill="#3c3b6e"/></svg>
-          <span style="opacity:0.3;font-size:0.6rem;line-height:1">/</span>
-          <svg viewBox="0 0 24 16" width="16" height="11"><rect width="24" height="16" fill="#fff"/><rect x="10.5" width="3" height="16" fill="#ce1124"/><rect y="6.5" width="24" height="3" fill="#ce1124"/></svg>
-          English
-        </button>
-      </div>
-    </div>
-  </header>
+<body class="landing-body">
 
-  <main>
-    <div class="hero-bg" aria-hidden="true">
-      <div class="hero-mist" aria-hidden="true"></div>
-      <div class="hero-orb hero-orb-1"></div>
-      <div class="hero-orb hero-orb-2"></div>
-      <div class="hero-orb hero-orb-3"></div>
-      <div class="particle particle-1" style="left:12%;top:55%;width:3px;height:3px;animation-delay:-2s,-0.5s;"></div>
-      <div class="particle particle-2" style="left:32%;top:35%;width:2px;height:2px;animation-delay:-8s,-1.2s;"></div>
-      <div class="particle particle-3" style="left:52%;top:70%;width:4px;height:4px;animation-delay:-14s,-2s;"></div>
-      <div class="particle particle-1" style="left:72%;top:25%;width:2px;height:2px;animation-delay:-5s,-3s;"></div>
-      <div class="particle particle-2" style="left:88%;top:75%;width:3px;height:3px;animation-delay:-11s,-0.8s;"></div>
-      <div class="particle particle-3" style="left:8%;top:18%;width:2px;height:2px;animation-delay:-18s,-1.5s;"></div>
-      <div class="particle particle-1" style="left:45%;top:85%;width:4px;height:4px;animation-delay:-7s,-4s;"></div>
-      <div class="particle particle-2" style="left:62%;top:12%;width:2px;height:2px;animation-delay:-22s,-2.5s;"></div>
-      <div class="particle particle-3" style="left:22%;top:45%;width:3px;height:3px;animation-delay:-3s,-1.8s;"></div>
-      <div class="particle particle-1" style="left:78%;top:50%;width:2px;height:2px;animation-delay:-16s,-3.5s;"></div>
-      <div class="particle particle-2" style="left:50%;top:8%;width:3px;height:3px;animation-delay:-9s,-0.3s;"></div>
-      <div class="particle particle-3" style="left:4%;top:68%;width:4px;height:4px;animation-delay:-12s,-1s;"></div>
-      <div class="hero-ring hero-ring-1"></div>
-      <div class="hero-ring hero-ring-2"></div>
-      <div class="hero-ring hero-ring-3"></div>
-      <div class="dust-particle dust-particle-1" aria-hidden="true"></div>
-      <div class="dust-particle dust-particle-2" aria-hidden="true"></div>
-      <div class="dust-particle dust-particle-3" aria-hidden="true"></div>
+  <!-- ─── Navbar ──────────────────────────────────────────── -->
+  <nav class="landing-nav">
+    <div class="landing-nav-left">
+      <div class="logo" style="margin:0;font-size:1.25rem">👻 Ghost<span class="logo-accent">Drop</span></div>
+      <div class="landing-nav-stats">
+        <span class="landing-nav-stat"><span class="stat-dot"></span> Max 250MB</span>
+        <span class="landing-nav-stat"><span class="stat-dot"></span> E2E Encrypted</span>
+        <span class="landing-nav-stat"><span class="stat-dot"></span> Self-destruct</span>
+      </div>
     </div>
-    <div class="hero-content">
-      <div class="hero-ghost-fixed hero-ghost-1" aria-hidden="true">
-        <div class="hero-ghost-bob"><div class="hero-ghost">👻</div></div>
+    <div class="landing-nav-right">
+      <div class="lang-switcher" id="lang-btn" style="position:relative;top:auto;right:auto">
+        <button class="lang-trigger" title="Change language">
+          <span class="lang-flags"></span>
+          <span class="lang-code">EN</span>
+          <svg class="lang-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+        </button>
+        <div class="lang-dropdown">
+          <button class="lang-option" data-lang="es" type="button">
+            <svg viewBox="0 0 24 16" width="16" height="11"><rect width="24" height="16" fill="#c60b1e"/><rect y="4" width="24" height="8" fill="#ffc400"/></svg>
+            <span style="opacity:0.3;font-size:0.6rem;line-height:1">/</span>
+            <svg viewBox="0 0 24 16" width="16" height="11"><rect width="8" height="16" fill="#006847"/><rect x="8" width="8" height="16" fill="#fff"/><rect x="16" width="8" height="16" fill="#ce1126"/></svg>
+            Español
+          </button>
+          <button class="lang-option active" data-lang="en" type="button">
+            <svg viewBox="0 0 24 16" width="16" height="11"><rect width="24" height="16" fill="#b22234"/><rect y="2" width="24" height="2" fill="#fff"/><rect y="6" width="24" height="2" fill="#fff"/><rect y="10" width="24" height="2" fill="#fff"/><rect y="14" width="24" height="2" fill="#fff"/><rect width="9.5" height="8" fill="#3c3b6e"/></svg>
+            <span style="opacity:0.3;font-size:0.6rem;line-height:1">/</span>
+            <svg viewBox="0 0 24 16" width="16" height="11"><rect width="24" height="16" fill="#fff"/><rect x="10.5" width="3" height="16" fill="#ce1124"/><rect y="6.5" width="24" height="3" fill="#ce1124"/></svg>
+            English
+          </button>
+        </div>
       </div>
-      <div class="hero-ghost-fixed hero-ghost-2" aria-hidden="true">
-        <div class="hero-ghost-bob"><div class="hero-ghost">👻</div></div>
-      </div>
-      <div class="hero-ghost-fixed hero-ghost-3" aria-hidden="true">
-        <div class="hero-ghost-bob"><div class="hero-ghost">👻</div></div>
-      </div>
+    </div>
+  </nav>
+
+  <!-- ─── Hero Split ───────────────────────────────────────── -->
+  <div class="landing-container">
+  <div class="landing-split">
+    <!-- Left Column -->
+    <div class="landing-left">
+      <div class="hero-bg" aria-hidden="true"></div>
       <h1 data-i18n="heroTitle">Share files<br>in 5 seconds</h1>
-      <p class="subtitle" data-i18n="subtitle">No signup · No apps · E2E encryption<br>The fastest way to share files</p>
-      
-      <a href="./app.html" class="cta-button" data-i18n="ctaButton">🚀 Open app</a>
-      
-      <div class="stats">
-        <div class="stat">
-          <div class="stat-value">5s</div>
-          <div class="stat-label" data-i18n="stat1Label">To share</div>
-        </div>
-        <div class="stat">
-          <div class="stat-value">250MB</div>
-          <div class="stat-label" data-i18n="stat2Label">Per file</div>
-        </div>
-        <div class="stat">
-          <div class="stat-value">∞</div>
-          <div class="stat-label" data-i18n="stat3Label">Free files</div>
-        </div>
+      <p class="subtitle" data-i18n="subtitle">No signup · No apps · E2E encryption — The fastest way to share files</p>
+
+      <div class="landing-actions">
+        <a href="./app.html" class="btn-primary" data-i18n="ctaButton">🚀 Open app</a>
+        <a href="#how-it-works" class="btn-secondary" style="width:auto" data-i18n="learnMore">Learn more</a>
       </div>
-      
-      <div class="section-divider" aria-hidden="true">
-        <div class="section-divider-line"></div>
-        <div class="section-divider-dot"></div>
-        <div class="section-divider-line"></div>
+
+      <div class="features-row">
+        <span class="features-row-item"><span class="fr-icon">🔐</span> E2E Encrypted</span>
+        <span class="features-row-item"><span class="fr-icon">👻</span> Zero tracking</span>
+        <span class="features-row-item"><span class="fr-icon">🔥</span> Self-destruct</span>
+        <span class="features-row-item"><span class="fr-icon">⚡</span> 5 seconds</span>
       </div>
-      
-      <div class="features">
-        <div class="feature">
-          <span class="feature-icon">⚡</span>
-          <div class="feature-title" data-i18n="feat1Title">5 seconds</div>
-           <div class="feature-desc" data-i18n="feat1Desc">5-char code<br>and you're sharing</div>
-        </div>
-        
-        <div class="feature">
-          <span class="feature-icon">🔐</span>
-          <div class="feature-title">AES-256-GCM</div>
-          <div class="feature-desc" data-i18n="feat2Desc">Real end-to-end<br>encryption</div>
-        </div>
-        
-        <div class="feature">
-          <span class="feature-icon">👻</span>
-          <div class="feature-title" data-i18n="feat3Title">Zero tracking</div>
-          <div class="feature-desc" data-i18n="feat3Desc">No IPs, no emails<br>no digital trail</div>
-        </div>
-        
-        <div class="feature">
-          <span class="feature-icon">🔥</span>
-          <div class="feature-title" data-i18n="feat4Title">Self-destruct</div>
-          <div class="feature-desc" data-i18n="feat4Desc">Files delete<br>automatically</div>
-        </div>
+    </div>
+
+    <!-- Right Column -->
+    <div class="landing-right">
+      <div class="bg-glow" aria-hidden="true" style="z-index:0">
+        <div class="bg-orb bg-orb-1" style="animation:orb-float-1 20s ease-in-out infinite alternate"></div>
+        <div class="bg-orb bg-orb-2" style="animation:orb-float-2 25s ease-in-out infinite alternate"></div>
       </div>
-      
-      <div class="how-it-works">
-        <h2 data-i18n="howTitle">How it works?</h2>
-        <div class="steps">
-          <div class="step" data-step-number="1">
-            <div class="step-number">1</div>
-            <div class="step-content">
-              <div class="step-title" data-i18n="step1Title">Create a room</div>
-              <div class="step-desc" data-i18n="step1Desc">Generate a 5-char code or use a custom one</div>
-            </div>
+      <div class="room-preview-card">
+        <div class="room-preview-header">
+          <span class="status-led">
+            <span class="led-dot off"></span>
+            <span data-i18n="statusIdle">No active room</span>
+          </span>
+          <span style="font-size:0.6875rem;color:var(--text-4);font-weight:500">v3.6</span>
+        </div>
+
+        <div class="room-preview-label" data-i18n="roomJoinLabel">Join or create a room</div>
+
+        <div class="digit-input-row" style="position:relative;z-index:1">
+          <div class="digit-boxes">
+            <input class="digit-box" type="text" inputmode="text" maxlength="1" pattern="[A-Z0-9]" autocomplete="off" />
+            <input class="digit-box" type="text" inputmode="text" maxlength="1" pattern="[A-Z0-9]" autocomplete="off" />
+            <input class="digit-box" type="text" inputmode="text" maxlength="1" pattern="[A-Z0-9]" autocomplete="off" />
+            <input class="digit-box" type="text" inputmode="text" maxlength="1" pattern="[A-Z0-9]" autocomplete="off" />
+            <input class="digit-box" type="text" inputmode="text" maxlength="1" pattern="[A-Z0-9]" autocomplete="off" />
           </div>
-          <div class="step" data-step-number="2">
-            <div class="step-number">2</div>
-            <div class="step-content">
-              <div class="step-title" data-i18n="step2Title">Drag files</div>
-              <div class="step-desc" data-i18n="step2Desc">Upload up to 500MB per file, encrypted automatically</div>
-            </div>
+          <button class="btn-primary" id="landing-join-btn" style="flex-shrink:0" data-i18n="joinBtn">Join</button>
+        </div>
+
+        <button class="btn-secondary" id="landing-random-btn" style="position:relative;z-index:1;margin-top:0.5rem;width:100%" data-i18n="newRoomBtn">🎲 Random room</button>
+
+        <div class="room-preview-divider"></div>
+
+        <div class="room-preview-features">
+          <div class="room-preview-feat">
+            <span class="rpf-icon">⚡</span>
+            <span data-i18n="featPreview1">5-char code</span>
           </div>
-          <div class="step" data-step-number="3">
-            <div class="step-number">3</div>
-            <div class="step-content">
-              <div class="step-title" data-i18n="step3Title">Share the code</div>
-              <div class="step-desc" data-i18n="step3Desc">Send the code to anyone, from any network</div>
-            </div>
+          <div class="room-preview-feat">
+            <span class="rpf-icon">🔐</span>
+            <span>Cifrado Militar AES-256</span>
+          </div>
+          <div class="room-preview-feat">
+            <span class="rpf-icon">📁</span>
+            <span data-i18n="featPreview2">Up to 250MB</span>
+          </div>
+          <div class="room-preview-feat">
+            <span class="rpf-icon">⏱️</span>
+            <span data-i18n="featPreview3">Autodestrucción</span>
           </div>
         </div>
       </div>
     </div>
-  </main>
+  </div>
+  </div>
 
+  <!-- ─── How it works ────────────────────────────────────── -->
+  <div id="how-it-works" class="landing-how">
+    <h2 data-i18n="howTitle">How it works?</h2>
+    <div class="landing-steps">
+      <div class="landing-step">
+        <div class="landing-step-number">01</div>
+        <div class="landing-step-title" data-i18n="step1Title">Create a room</div>
+        <div class="landing-step-desc" data-i18n="step1Desc">Generate a 5-char code or use a custom one</div>
+      </div>
+      <div class="landing-step">
+        <div class="landing-step-number">02</div>
+        <div class="landing-step-title" data-i18n="step2Title">Drag files</div>
+        <div class="landing-step-desc" data-i18n="step2Desc">Upload up to 250MB per file, encrypted automatically</div>
+      </div>
+      <div class="landing-step">
+        <div class="landing-step-number">03</div>
+        <div class="landing-step-title" data-i18n="step3Title">Share the code</div>
+        <div class="landing-step-desc" data-i18n="step3Desc">Send the code to anyone, from any network</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ─── Footer ──────────────────────────────────────────── -->
   <footer>
     <div class="footer-links">
       <a href="./privacy.html" data-i18n="footerPrivacy">Privacy</a>
+      <span style="opacity:0.3">·</span>
       <a href="./terms.html" data-i18n="footerTerms">Terms</a>
-      <a href="https://github.com/itzugax/ghost" target="_blank">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
-          <path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/>
-        </svg>
+      <span style="opacity:0.3">·</span>
+      <a href="https://github.com/itzugax/ghost" target="_blank" rel="noopener" style="display:inline-flex;align-items:center;gap:0.375rem">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/></svg>
         GitHub
       </a>
+      <span style="opacity:0.3">·</span>
       <a href="mailto:jorgeugax@gmail.com" data-i18n="footerContact">Contact</a>
     </div>
     <div class="footer-copyright" data-i18n="footerCopy">© 2026 Ghost Drop. Made with 👻 by Ugax</div>
@@ -1128,25 +191,23 @@
     const translations = {
       es: {
         heroTitle: "Comparte archivos<br>en 5 segundos",
-        subtitle: "Sin registro · Sin apps · Cifrado E2E<br>La forma más rápida de compartir archivos",
+        subtitle: "Sin registro · Sin apps · Cifrado E2E — La forma más rápida de compartir archivos",
         ctaButton: "🚀 Abrir app",
-        stat1Label: "Para compartir",
-        stat2Label: "Por archivo",
-        stat3Label: "Archivos gratis",
-        feat1Title: "5 segundos",
-        feat1Desc: "Código de 5 caracteres<br>y listo para compartir",
-        feat2Desc: "Cifrado de extremo<br>a extremo real",
-        feat3Title: "Cero tracking",
-        feat3Desc: "Sin IPs, sin emails<br>sin rastro digital",
-        feat4Title: "Auto-destrucción",
-        feat4Desc: "Los archivos se borran<br>automáticamente",
-        howTitle: "¿Cómo funciona?",
+        learnMore: "Saber más",
+        joinBtn: "Entrar",
+        newRoomBtn: "🎲 Sala aleatoria",
+        statusIdle: "Sin sala activa",
+        roomJoinLabel: "Únete o crea una sala",
+        featPreview1: "Código de 5 caracteres",
+        featPreview2: "Hasta 250MB",
+        featPreview3: "TTL de 1-15 min",
         step1Title: "Crea una sala",
         step1Desc: "Genera un código de 5 caracteres o usa uno personalizado",
         step2Title: "Arrastra archivos",
         step2Desc: "Sube hasta 250MB por archivo, cifrado automáticamente",
         step3Title: "Comparte el código",
         step3Desc: "Envía el código a quien quieras, desde cualquier red",
+        howTitle: "¿Cómo funciona?",
         footerPrivacy: "Privacidad",
         footerTerms: "Términos",
         footerContact: "Contacto",
@@ -1154,39 +215,37 @@
       },
       en: {
         heroTitle: "Share files<br>in 5 seconds",
-        subtitle: "No signup · No apps · E2E encryption<br>The fastest way to share files",
+        subtitle: "No signup · No apps · E2E encryption — The fastest way to share files",
         ctaButton: "🚀 Open app",
-        stat1Label: "To share",
-        stat2Label: "Per file",
-        stat3Label: "Free files",
-        feat1Title: "5 seconds",
-        feat1Desc: "5-char code<br>and you're sharing",
-        feat2Desc: "Real end-to-end<br>encryption",
-        feat3Title: "Zero tracking",
-        feat3Desc: "No IPs, no emails<br>no digital trail",
-        feat4Title: "Self-destruct",
-        feat4Desc: "Files delete<br>automatically",
-        howTitle: "How it works?",
+        learnMore: "Learn more",
+        joinBtn: "Join",
+        newRoomBtn: "🎲 Random room",
+        statusIdle: "No active room",
+        roomJoinLabel: "Join or create a room",
+        featPreview1: "5-char code",
+        featPreview2: "Up to 250MB",
+        featPreview3: "1-15 min TTL",
         step1Title: "Create a room",
         step1Desc: "Generate a 5-char code or use a custom one",
         step2Title: "Drag files",
         step2Desc: "Upload up to 250MB per file, encrypted automatically",
         step3Title: "Share the code",
         step3Desc: "Send the code to anyone, from any network",
+        howTitle: "How it works?",
         footerPrivacy: "Privacy",
         footerTerms: "Terms",
         footerContact: "Contact",
         footerCopy: "© 2026 Ghost Drop. Made with 👻 by Ugax"
       }
     };
-    
+
     let currentLang = 'en';
-    
+
     function detectLanguage() {
-      const browserLang = navigator.language || navigator.userLanguage;
-      return browserLang.startsWith('es') ? 'es' : 'en';
+      const l = navigator.language || navigator.userLanguage;
+      return l.startsWith('es') ? 'es' : 'en';
     }
-    
+
     function getFlagsHTML(lang) {
       var esp='<svg viewBox="0 0 24 16" width="15" height="10" style="flex-shrink:0;border-radius:1.5px"><rect width="24" height="16" fill="#c60b1e"/><rect y="4" width="24" height="8" fill="#ffc400"/></svg>';
       var mex='<svg viewBox="0 0 24 16" width="15" height="10" style="flex-shrink:0;border-radius:1.5px"><rect width="8" height="16" fill="#006847"/><rect x="8" width="8" height="16" fill="#fff"/><rect x="16" width="8" height="16" fill="#ce1126"/></svg>';
@@ -1194,24 +253,18 @@
       var eng='<svg viewBox="0 0 24 16" width="15" height="10" style="flex-shrink:0;border-radius:1.5px"><rect width="24" height="16" fill="#fff"/><rect x="10.5" width="3" height="16" fill="#ce1124"/><rect y="6.5" width="24" height="3" fill="#ce1124"/></svg>';
       return lang==='es' ? esp+'<span style="opacity:0.25;font-size:0.5rem;line-height:1">/</span>'+mex : usa+'<span style="opacity:0.25;font-size:0.5rem;line-height:1">/</span>'+eng;
     }
-    
+
     function applyTranslations(lang) {
       currentLang = lang;
       const t = translations[lang];
-      
       document.querySelectorAll('[data-i18n]').forEach(el => {
         const key = el.getAttribute('data-i18n');
         if (t[key]) {
-          if (t[key].includes('<')) {
-            el.innerHTML = t[key];
-          } else {
-            el.textContent = t[key];
-          }
+          if (t[key].includes('<')) el.innerHTML = t[key];
+          else el.textContent = t[key];
         }
       });
-      
       document.documentElement.lang = lang;
-      
       const langBtn = document.getElementById('lang-btn');
       if (langBtn) {
         const langCode = langBtn.querySelector('.lang-code');
@@ -1223,53 +276,68 @@
           opt.classList.toggle('active', opt.dataset.lang === lang);
         });
       }
-      
-      document.title = lang === 'es' 
+      document.title = lang === 'es'
         ? 'Ghost Drop — Comparte archivos en 5 segundos'
         : 'Ghost Drop — Share files in 5 seconds';
     }
-    
+
     document.getElementById('lang-btn')?.addEventListener('click', (e) => {
       const option = e.target.closest('.lang-option');
       if (option) {
         const newLang = option.dataset.lang;
-        if (newLang) {
-          applyTranslations(newLang);
-          localStorage.setItem('ghostdrop-lang', newLang);
-        }
+        if (newLang) { applyTranslations(newLang); localStorage.setItem('ghostdrop-lang', newLang); }
         return;
       }
       const newLang = currentLang === 'es' ? 'en' : 'es';
       applyTranslations(newLang);
       localStorage.setItem('ghostdrop-lang', newLang);
     });
-    
+
     const saved = localStorage.getItem('ghostdrop-lang');
     const lang = saved || detectLanguage();
     applyTranslations(lang);
+
+    // Digit auto-advance for preview inputs
+    document.querySelectorAll('.room-preview-card .digit-box').forEach((box, i, arr) => {
+      box.addEventListener('input', () => {
+        if (box.value && i < arr.length - 1) arr[i + 1].focus();
+      });
+      box.addEventListener('keydown', (e) => {
+        if (e.key === 'Backspace' && !box.value && i > 0) arr[i - 1].focus();
+      });
+    });
+
+    // ─── Room generation ────
+    document.getElementById('landing-join-btn').addEventListener('click', function(e) {
+      e.preventDefault();
+      var boxes = document.querySelectorAll('.room-preview-card .digit-box');
+      var typed = '';
+      for (var i = 0; i < boxes.length; i++) typed += boxes[i].value;
+      typed = typed.toUpperCase();
+      if (typed.length === 5) {
+        var url = new URL('app.html', location.href);
+        url.searchParams.set('room', typed);
+        location.href = url.href;
+      }
+    });
+
+    document.getElementById('landing-random-btn').addEventListener('click', function() {
+      var pool = '23456789ACDEFGHJKLMNPQRSTUWXYZ';
+      var code = '';
+      for (var a = 0; a < 5; a++) code += pool[Math.floor(Math.random() * pool.length)];
+      var url = new URL('app.html', location.href);
+      url.searchParams.set('room', code);
+      location.href = url.href;
+    });
   </script>
-  
-  <!-- Service Worker para PWA -->
+
+  <!-- Service Worker -->
   <script>
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
-        navigator.serviceWorker.register('./sw.js')
-          .then(reg => console.log('✅ Service Worker registrado'))
-          .catch(err => console.warn('⚠️ Service Worker error:', err));
+        navigator.serviceWorker.register('./sw.js').catch(() => {});
       });
     }
-  </script>
-
-  <script>
-    (function() {
-      function randomDelay(className, duration) {
-        var el = document.querySelector('.' + className);
-        if (el) el.style.animationDelay = -(Math.random() * duration) + 's';
-      }
-      randomDelay('hero-ghost-1', 60);
-      randomDelay('hero-ghost-2', 28);
-      randomDelay('hero-ghost-3', 18);
-    })();
   </script>
 
 </body>

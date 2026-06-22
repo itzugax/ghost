@@ -119,6 +119,12 @@ const translations = {
     // Burn badge
     burnBadge: "Se borra después de 1 descarga",
     
+    // Sidebar
+    sidebarMaxSize: "Máx. 250 MB",
+    sidebarCrypto: "Cifrado Militar AES-256",
+    sidebarTTL: "Autodestrucción",
+    sidebarFiles: "archivos compartidos",
+
     // Footer
     footerPrivacy: "Privacidad",
     footerTerms: "Términos",
@@ -275,6 +281,12 @@ const translations = {
     // Burn badge
     burnBadge: "Deletes after 1 download",
     
+    // Sidebar
+    sidebarMaxSize: "Max 250 MB",
+    sidebarCrypto: "Military-Grade AES-256",
+    sidebarTTL: "Self-Destruct",
+    sidebarFiles: "files shared",
+
     // Footer
     footerPrivacy: "Privacy",
     footerTerms: "Terms",

@@ -57,6 +57,16 @@ const recentList   = document.getElementById("recent-list");
 function setStatus(msg, type = "info") {
   statusEl.textContent = msg;
   statusEl.className   = `status ${type}`;
+  // Sync nav LED
+  const ledDot = document.getElementById("status-led-dot");
+  const ledText = document.getElementById("status-text");
+  if (ledDot) {
+    ledDot.className = "led-dot";
+    if (type === "success") ledDot.classList.add("on");
+    else if (type === "warn") ledDot.classList.add("warn");
+    else ledDot.classList.add("off");
+  }
+  if (ledText) ledText.textContent = msg;
 }
 
 function show(...els) { els.forEach(el => el && el.classList.remove("hidden")); }
@@ -1011,7 +1021,7 @@ async function joinRoom(code) {
   roomCodeDisp.textContent = `${t('room')} ${roomId}`;
   copyBtn.dataset.code = roomId;
 
-  hide(roomSection);
+  roomSection.classList.add("room-compact");
   show(roomBadge, dropSection, textSection, listSection);
   setStatus(t('statusConnecting'), "info");
 
@@ -1047,8 +1057,8 @@ function leaveRoom() {
   roomId = null;
   membersCount = 0;
 
+  roomSection.classList.remove("room-compact");
   hide(roomBadge, dropSection, textSection, listSection);
-  show(roomSection);
   filesList.innerHTML = `
     <li class="empty-state">
       <span class="empty-ghost">${t('emptyGhost')}</span>
@@ -1380,6 +1390,8 @@ function updateDropCount(n) {
   const prev = el.textContent;
   const next = count ? `· ${count}` : "";
   el.textContent = next;
+  const sideEl = document.getElementById("drop-count-side");
+  if (sideEl) sideEl.textContent = count;
   
   // Mostrar/ocultar botón "Descargar todo"
   const downloadAllBtn = document.getElementById("download-all-btn");

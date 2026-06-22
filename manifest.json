@@ -5,8 +5,8 @@
   "description": "Comparte archivos cifrados sin registro. Códigos alfanuméricos de 5 caracteres.",
   "start_url": "./",
   "display": "standalone",
-  "background_color": "#0a0e1a",
-  "theme_color": "#00d9ff",
+  "background_color": "#0B0F19",
+  "theme_color": "#3b82f6",
   "icons": [
     {
       "src": "icon.png",
